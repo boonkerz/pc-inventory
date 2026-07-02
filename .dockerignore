@@ -1,0 +1,10 @@
+# Build-Kontext schlank halten.
+.git
+bin/
+web/node_modules/
+web/dist/assets/
+.playwright-mcp/
+*.db
+*.db-wal
+*.db-shm
+docker/**/data/

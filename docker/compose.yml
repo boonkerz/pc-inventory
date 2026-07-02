@@ -1,0 +1,147 @@
+# Test-Stack für PC-Inventory.
+#
+#   docker compose -f docker/compose.yml up --build   # startet ALLES inkl. Windows-VM (KVM)
+#
+# Web-UI:        https://localhost:8443  (admin / admin1234; selbstsigniert -> Browser-Warnung wegklicken)
+# Windows-Viewer http://localhost:8006   (Installationsfortschritt der Windows-VM)
+#
+# Hinweise:
+# - Der Windows-Service braucht /dev/kvm; der Erststart lädt mehrere GB (Eval-Image).
+# - Der feste PCINV_SEED_ENROLL_TOKEN ist NUR für diese Testumgebung gedacht.
+
+name: pc-inventory-test
+
+networks:
+  invnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.19.0.0/24
+          gateway: 172.19.0.1
+    # Feste IPs (für DNS-/Agent-Ziele):
+    #   172.19.0.10  samba-addc   (DNS-Server der Windows-VM)
+    #   172.19.0.11  inventory-host
+
+volumes:
+  inventory-data:
+  samba-data:
+  samba-conf:
+  windows-data:
+
+services:
+  # --- Inventory-Server (Linux) ---
+  inventory-host:
+    build:
+      context: ..
+      dockerfile: docker/server/Dockerfile
+      args:
+        VERSION: "${VERSION:-0.1.0}"
+    networks:
+      invnet:
+        ipv4_address: 172.19.0.11
+    ports:
+      - "8443:8443"
+    environment:
+      PCINV_ADDR: ":8443"
+      PCINV_DB: "sqlite:///var/lib/pc-inventory/inventory.db"
+      PCINV_SECURE_COOKIE: "true"
+      PCINV_CHECKIN_INTERVAL: "30s"
+      PCINV_SEED_ADMIN_USER: "admin"
+      PCINV_SEED_ADMIN_PASSWORD: "admin1234"
+      PCINV_SEED_ENROLL_TOKEN: "test-enroll-token"
+      # TLS für die Entwicklung: selbstsigniertes Zertifikat, das der Server beim
+      # ersten Start erzeugt und in den geteilten Ordner schreibt (Agents pinnen es).
+      PCINV_TLS_SELFSIGNED: "true"
+      PCINV_TLS_CERT: "/certs/cert.pem"
+      PCINV_TLS_KEY: "/certs/key.pem"
+      PCINV_TLS_HOSTS: "inventory-host,localhost,127.0.0.1,172.19.0.11"
+    volumes:
+      - inventory-data:/var/lib/pc-inventory
+      - ./windows/shared:/certs   # cert.pem hier ist auch in der Windows-VM (\\172.30.0.1\Data) sichtbar
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "--no-check-certificate", "https://127.0.0.1:8443/"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # --- Linux-Test-PC: lässt nur den Agent laufen ---
+  linux-test-pc:
+    build:
+      context: ..
+      dockerfile: docker/agent/Dockerfile
+      args:
+        VERSION: "${VERSION:-0.1.0}"
+    hostname: linux-test-pc
+    networks: [invnet]
+    environment:
+      PCINV_SERVER_URL: "https://inventory-host:8443"
+      PCINV_ENROLLMENT_TOKEN: "test-enroll-token"
+      PCINV_INTERVAL: "30s"
+      PCINV_INSECURE: "false"
+      PCINV_CACERT: "/certs/cert.pem"   # vom Server erzeugtes Zertifikat pinnen
+    volumes:
+      - ./windows/shared:/certs:ro
+    depends_on:
+      inventory-host:
+        condition: service_healthy
+
+  # --- Samba Active Directory Domain Controller (standalone, für späteres LDAP/M4) ---
+  samba-addc:
+    build:
+      context: ..
+      dockerfile: docker/samba/Dockerfile
+    hostname: dc1
+    networks:
+      invnet:
+        ipv4_address: 172.19.0.10
+    privileged: true              # Samba-DC benötigt erweiterte Rechte
+    environment:
+      REALM: "EXAMPLE.LOCAL"
+      DOMAIN: "EXAMPLE"
+      ADMIN_PASS: "Passw0rd!"
+    ports:
+      - "1389:389"   # LDAP  (Host:Container)
+      - "1636:636"   # LDAPS
+    volumes:
+      - samba-data:/var/lib/samba
+      - samba-conf:/etc/samba
+    healthcheck:
+      # DNS+AD bereit, sobald die Domäne sich selbst auflöst
+      test: ["CMD-SHELL", "host -W 2 EXAMPLE.LOCAL 127.0.0.1 >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  # --- Windows-Test-PC (Server, headless) – startet mit dem übrigen Stack ---
+  windows-test-pc:
+    image: dockurr/windows
+    hostname: win-test-pc
+    networks: [invnet]
+    environment:
+      VERSION: "2022"          # Windows Server 2022 (Eval); headless nutzbar
+      RAM_SIZE: "4G"
+      CPU_CORES: "2"
+      USERNAME: "Administrator"
+      PASSWORD: "Passw0rd!"
+      # Deutsche Sprache, Region und Tastatur (greifen bei der unbeaufsichtigten Installation).
+      LANGUAGE: "German"
+      REGION: "de-DE"
+      KEYBOARD: "de-DE"
+    devices:
+      - /dev/kvm
+      - /dev/net/tun
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "8006:8006"   # Web-Viewer (Installationsfortschritt)
+      - "3389:3389"   # RDP
+    volumes:
+      - windows-data:/storage
+      - ./windows/oem:/oem        # install.bat richtet DNS (Samba) + Features + Agent ein
+      - ./windows/shared:/data    # in der VM erreichbar als \\172.30.0.1\Data (Dateiaustausch)
+    # Auf den DC warten, damit DNS für den Domänenbeitritt bereitsteht.
+    depends_on:
+      samba-addc:
+        condition: service_healthy
+    stop_grace_period: 2m
+    restart: on-failure

@@ -1,0 +1,37 @@
+# Beispiel-Konfiguration für den PC-Inventory-Agent.
+# Standardpfade:
+#   Windows: C:\ProgramData\PC-Inventory\agent.yaml
+#   Linux:   /etc/pc-inventory/agent.yaml
+#   macOS:   /etc/pc-inventory/agent.yaml
+
+# URL des Servers.
+server_url: "https://inventory.example.com:8443"
+
+# Enrollment-Token (in der Web-UI unter Einstellungen erzeugt, per GPO verteilt).
+# Wird nur beim ersten Start benötigt; danach nutzt der Agent sein eigenes Token.
+enrollment_token: "HIER_ENROLLMENT_TOKEN_EINFUEGEN"
+
+# Optional: CA-Zertifikat des Servers pinnen (empfohlen bei eigener CA).
+ca_cert_path: ""
+
+# NUR für lokale Tests mit self-signed Zertifikat – in Produktion auf false lassen.
+insecure_skip_verify: false
+
+# Checkin-Intervall (der Server kann ein anderes vorschlagen).
+interval: "5m"
+
+# Ablageort des Agent-States (enthält das Agent-Token, Rechte 0600).
+# Leer = neben dieser Konfigurationsdatei.
+state_path: ""
+
+# Selbst-Update: Der Agent lädt bei einer neueren Server-Version automatisch das
+# passende Binary vom Server und startet neu. Auf true setzen, um das abzuschalten.
+disable_auto_update: false
+
+# Suche nach verfügbaren Betriebssystem-Updates/Patches (im Hintergrund, gecached).
+# Intervall (Default 6h) und Abschalter:
+update_check_interval: "6h"
+disable_update_check: false
+
+# Ermittlung der öffentlichen IP (einmaliger Aufruf an api.ipify.org). true = aus.
+disable_public_ip: false

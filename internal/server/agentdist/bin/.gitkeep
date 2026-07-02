@@ -1,0 +1,2 @@
+# Platzhalter, damit go:embed das Verzeichnis findet.
+# Die Agent-Binaries werden vor dem Server-Build erzeugt (make agents-embed) und sind gitignored.

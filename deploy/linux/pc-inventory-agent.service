@@ -1,0 +1,27 @@
+# systemd-Unit für den PC-Inventory-Agent.
+# Installation:
+#   sudo cp agent-linux-amd64 /usr/local/bin/pc-inventory-agent
+#   sudo mkdir -p /etc/pc-inventory && sudo cp agent.yaml.example /etc/pc-inventory/agent.yaml
+#   # agent.yaml anpassen (server_url + enrollment_token)
+#   sudo cp pc-inventory-agent.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now pc-inventory-agent
+#
+# Alternativ registriert der Agent den Dienst selbst:
+#   sudo /usr/local/bin/pc-inventory-agent -config /etc/pc-inventory/agent.yaml install
+
+[Unit]
+Description=PC-Inventory Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/pc-inventory-agent -config /etc/pc-inventory/agent.yaml run
+Restart=on-failure
+RestartSec=10
+# Eingeschränkte Rechte; für die DMI-Seriennummer ggf. anpassen.
+DynamicUser=yes
+StateDirectory=pc-inventory
+
+[Install]
+WantedBy=multi-user.target

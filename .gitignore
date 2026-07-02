@@ -1,0 +1,28 @@
+# Build-Artefakte
+/bin/
+# Eingebettetes Frontend (wird aus web/src gebaut)
+/web/dist/assets/
+/web/node_modules/
+# Eingebettete Agent-Binaries (werden per "make agents-embed" cross-kompiliert)
+/internal/server/agentdist/bin/agent-*
+
+# Lokale Daten / Konfiguration
+*.db
+*.db-wal
+*.db-shm
+inventory.db
+agent-state.json
+/etc/
+*.crt
+*.key
+
+# Windows-Agent-Binary (per "make cross" erzeugt) + Shared-Folder-Inhalt
+docker/windows/oem/agent.exe
+docker/windows/shared/*
+!docker/windows/shared/README.md
+
+# Tooling
+.playwright-mcp/
+.DS_Store
+/agent
+/server

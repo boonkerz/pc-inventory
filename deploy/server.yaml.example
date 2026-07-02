@@ -1,0 +1,31 @@
+# Beispiel-Konfiguration für den PC-Inventory-Server.
+# Pfad beim Start angeben: server -config /etc/pc-inventory/server.yaml run
+# Alle Werte sind auch per ENV überschreibbar (PCINV_ADDR, PCINV_DB, ...).
+
+# Listen-Adresse.
+addr: ":8443"
+
+# Datenbank: SQLite für kleine Umgebungen ODER PostgreSQL für große.
+database_url: "sqlite:///var/lib/pc-inventory/inventory.db"
+# database_url: "postgres://inventory:passwort@db-host:5432/inventory?sslmode=require"
+
+# TLS – in Produktion zwingend setzen (sonst läuft der Server als reines HTTP).
+tls_cert: "/etc/pc-inventory/server.crt"
+tls_key: "/etc/pc-inventory/server.key"
+# Entwicklung ohne echtes Zertifikat: selbstsigniertes erzeugen, falls die Dateien
+# oben fehlen. Der Agent pinnt cert.pem dann via ca_cert_path (insecure_skip_verify=false).
+# tls_self_signed: true
+# tls_hosts: "inventory.example.com,127.0.0.1"
+
+# Empfohlenes Checkin-Intervall für Agents.
+checkin_interval: "5m"
+# Ab dieser Stille gilt ein Gerät als offline (leer = 2,5x checkin_interval).
+offline_after: ""
+
+# Seed-Admin beim allerersten Start (nur falls noch kein Benutzer existiert).
+# Bleibt das Passwort leer, wird eines generiert und einmalig ins Log geschrieben.
+seed_admin_user: "admin"
+seed_admin_password: ""
+
+# Cookie nur über HTTPS senden (Produktion: true).
+secure_cookie: true

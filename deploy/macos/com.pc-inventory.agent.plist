@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  launchd-Daemon für den PC-Inventory-Agent (macOS).
+  Installation:
+    sudo cp agent-darwin-arm64 /usr/local/bin/pc-inventory-agent
+    sudo mkdir -p /etc/pc-inventory && sudo cp agent.yaml.example /etc/pc-inventory/agent.yaml
+    # agent.yaml anpassen (server_url + enrollment_token)
+    sudo cp com.pc-inventory.agent.plist /Library/LaunchDaemons/
+    sudo launchctl load /Library/LaunchDaemons/com.pc-inventory.agent.plist
+
+  Alternativ registriert der Agent den Dienst selbst:
+    sudo /usr/local/bin/pc-inventory-agent -config /etc/pc-inventory/agent.yaml install
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.pc-inventory.agent</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/pc-inventory-agent</string>
+        <string>-config</string>
+        <string>/etc/pc-inventory/agent.yaml</string>
+        <string>run</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardErrorPath</key>
+    <string>/var/log/pc-inventory-agent.log</string>
+    <key>StandardOutPath</key>
+    <string>/var/log/pc-inventory-agent.log</string>
+</dict>
+</plist>
