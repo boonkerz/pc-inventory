@@ -486,4 +486,6 @@ export const EN: Record<string, string> = {
   "2FA für „{name}“ zurücksetzen? Der Nutzer muss es beim nächsten Login neu einrichten.": "Reset 2FA for “{name}”? The user must set it up again on next sign-in.",
   "Gültig (Std., 0=∞)": "Valid (hrs, 0=∞)",
   "nie": "never",
+  "Neuer Client": "New client",
+  "zuletzt": "last seen",
 };

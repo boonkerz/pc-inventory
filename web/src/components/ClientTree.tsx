@@ -149,7 +149,7 @@ export function ClientTree({ tree, total, selected, onSelect, isAdmin }: Props) 
       })}
 
       {isAdmin && (
-        <button className="tree-add" onClick={() => createClient.mutate()}>+ Neuer Client</button>
+        <button className="tree-add" onClick={() => createClient.mutate()}>+ {t("Neuer Client")}</button>
       )}
 
       {fieldsFor && (

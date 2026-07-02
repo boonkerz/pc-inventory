@@ -55,7 +55,7 @@ for (const lang of ["de", "en"]) {
   try {
     await p.click('button.tab-group:has-text("System")'); await wait(300);
     await p.click('button.tab:has-text("Dienste"),button.tab:has-text("Services")');
-    await p.waitForSelector("table tbody tr", { timeout: 30000 });
+    await p.waitForSelector(".scroll-list table tbody tr", { timeout: 30000 });
     await wait(800);
     await shot(`services-${lang}`);
   } catch (e) { console.log("services capture:", e.message); }

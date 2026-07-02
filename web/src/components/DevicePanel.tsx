@@ -152,7 +152,7 @@ export function DevicePanel({ id }: { id: string }) {
           {device.logged_in_users && device.logged_in_users.length > 0 && (
             <span className="muted">· {device.logged_in_users.join(", ")}</span>
           )}
-          <span className="muted">· zuletzt {relTime(device.last_seen)}</span>
+          <span className="muted">· {t("zuletzt")} {relTime(device.last_seen)}</span>
         </div>
         <div className="actions">
           <button className="btn ghost sm" onClick={invalidate} title={t("Aktualisieren")}>↻</button>
