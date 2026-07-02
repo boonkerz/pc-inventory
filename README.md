@@ -15,15 +15,17 @@ as **one binary**; the UI is fully **bilingual (English / German)**.
 
 ## Screenshots
 
-Run [`scripts/screenshots.sh`](scripts/screenshots.sh) to generate them locally — it
-spins up a throwaway demo instance plus a real agent on your machine and captures the
-Dashboard, device panel, live utilization and services views in both English and
-German (into `docs/screenshots/`). Once generated, embed them here, e.g.:
+**Dashboard** (English UI)
 
-```md
 ![Dashboard](docs/screenshots/dashboard-en.png)
-![Devices](docs/screenshots/devices-en.png)
-```
+
+**Device panel – live utilization** (German UI)
+
+![Live utilization](docs/screenshots/live-de.png)
+
+> More views and both languages: run [`scripts/screenshots.sh`](scripts/screenshots.sh)
+> to regenerate all screenshots locally (throwaway demo server + a real agent on your
+> machine, captured in English and German into `docs/screenshots/`).
 
 ---
 
