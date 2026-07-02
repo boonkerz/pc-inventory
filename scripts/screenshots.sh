@@ -11,11 +11,18 @@ cd "$(dirname "$0")/.."
 DD="$(mktemp -d)"
 OUT="docs/screenshots"; mkdir -p "$OUT"
 PORT="${PORT:-18080}"
-trap 'kill $(jobs -p) 2>/dev/null || true; rm -rf "$DD"' EXIT
+# On exit: stop demo processes, remove temp dir, and restore the committed
+# placeholder web/dist/index.html (the build step overwrote it with hashed asset
+# references that must not be committed).
+trap 'kill $(jobs -p) 2>/dev/null || true; rm -rf "$DD"; git checkout -- web/dist/index.html 2>/dev/null || true' EXIT
 
-echo "→ ensuring Playwright + Chromium are available…"
+echo "→ installing web dependencies + Playwright/Chromium…"
+( cd web && npm install >/dev/null 2>&1 )
 ( cd web && npm ls playwright >/dev/null 2>&1 || npm install --no-save playwright >/dev/null 2>&1 )
 ( cd web && npx playwright install chromium >/dev/null 2>&1 || true )
+
+echo "→ building web UI (embedded into the server)…"
+( cd web && npm run build >/dev/null 2>&1 )
 
 echo "→ building server + agent…"
 CGO_ENABLED=0 go build -o "$DD/server" ./cmd/server
