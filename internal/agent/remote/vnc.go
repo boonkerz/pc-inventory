@@ -3,7 +3,10 @@ package remote
 import (
 	"context"
 	"net"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"time"
 
 	"log/slog"
@@ -13,10 +16,21 @@ import (
 	"github.com/thomaspeterson/pc-inventory/internal/agent/transport"
 )
 
-// vncServerPath liefert den Pfad zum nativen VNC-Server. Vorerst wird er im PATH
-// gesucht; das On-demand-Bündeln (Download vom Server + Cache) folgt separat.
+// vncServerPath liefert den Pfad zum nativen VNC-Server. Gesucht wird neben der
+// Agent-EXE (dort kann man das Binary einfach hinlegen) und im PATH. Das
+// On-demand-Bündeln (Download vom Server + Cache) folgt separat.
 func vncServerPath(name string) (string, error) {
-	return exec.LookPath(name)
+	exe := name
+	if runtime.GOOS == "windows" && filepath.Ext(exe) == "" {
+		exe = name + ".exe"
+	}
+	if self, err := os.Executable(); err == nil {
+		cand := filepath.Join(filepath.Dir(self), exe)
+		if st, serr := os.Stat(cand); serr == nil && !st.IsDir() {
+			return cand, nil
+		}
+	}
+	return exec.LookPath(exe)
 }
 
 // handleVNC bedient eine Fernsteuerungs-Sitzung: es startet on-demand einen
