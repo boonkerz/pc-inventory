@@ -1,0 +1,85 @@
+import { useEffect, useRef, useState } from "react";
+import RFB from "@novnc/novnc";
+import { useI18n } from "../i18n";
+import { api } from "../api";
+
+// DeviceRemote öffnet eine Web-Fernsteuerung (Remote Desktop) über noVNC. Der Server
+// startet on-demand einen VNC-Server am Gerät und tunnelt die RFB-Bytes über eine
+// WebSocket – gleiche Origin, daher Cookie-Auth. fill = füllt das Popout-Fenster;
+// autoStart = sofort verbinden (Popout).
+export function DeviceRemote({ id, os, fill, autoStart }: {
+  id: string; os: string; fill?: boolean; autoStart?: boolean;
+}) {
+  const { t } = useI18n();
+  const [status, setStatus] = useState("");
+  const [connected, setConnected] = useState(false);
+  const [session, setSession] = useState(autoStart ? 1 : 0); // hochzählen = (neu) verbinden
+  const hostRef = useRef<HTMLDivElement>(null);
+  const rfbRef = useRef<any>(null);
+
+  const popout = () => {
+    window.open(`/devices/${id}/remote?os=${encodeURIComponent(os)}`, `remote-${id}`,
+      "width=1024,height=720,menubar=no,toolbar=no,location=no,status=no");
+  };
+
+  useEffect(() => {
+    if (session === 0 || !hostRef.current) return;
+    let rfb: any = null;
+    let cancelled = false;
+    setStatus(t("verbinde…"));
+    setConnected(false);
+
+    (async () => {
+      let start: { session: string; password: string };
+      try {
+        start = await api.post<{ session: string; password: string }>(`/devices/${id}/remote/start`, {});
+      } catch (e) {
+        if (!cancelled) setStatus(t("Fernsteuerung konnte nicht gestartet werden."));
+        return;
+      }
+      if (cancelled || !hostRef.current) return;
+
+      const proto = location.protocol === "https:" ? "wss" : "ws";
+      const url = `${proto}://${location.host}/api/v1/devices/${id}/remote/ws?session=${encodeURIComponent(start.session)}`;
+      rfb = new RFB(hostRef.current, url, { credentials: { password: start.password } });
+      rfb.scaleViewport = true;
+      rfb.clipViewport = true;
+      rfb.background = "#0b0e14";
+      rfbRef.current = rfb;
+
+      rfb.addEventListener("connect", () => { setStatus(t("verbunden")); setConnected(true); });
+      rfb.addEventListener("disconnect", (e: any) => {
+        setConnected(false);
+        setStatus(e?.detail?.clean ? t("getrennt") : t("Verbindung verloren"));
+      });
+      rfb.addEventListener("credentialsrequired", () => rfb.sendCredentials({ password: start.password }));
+      rfb.addEventListener("securityfailure", () => setStatus(t("Authentifizierung fehlgeschlagen")));
+    })();
+
+    return () => {
+      cancelled = true;
+      try { rfb?.disconnect(); } catch { /* ignore */ }
+      rfbRef.current = null;
+    };
+  }, [session, id]);
+
+  return (
+    <div className={fill ? "remote-fill" : "remote-panel"}>
+      <div className="remote-bar">
+        <span className={`badge ${connected ? "badge-online" : "badge-unknown"}`}>{status || t("getrennt")}</span>
+        <div className="spacer" />
+        {connected && (
+          <>
+            <button className="btn ghost sm" onClick={() => rfbRef.current?.sendCtrlAltDel()}>Ctrl+Alt+Entf</button>
+            <button className="btn ghost sm" onClick={() => setSession((n) => n + 1)}>{t("Neu verbinden")}</button>
+            <button className="btn ghost sm" onClick={() => { try { rfbRef.current?.disconnect(); } catch { /* */ } setSession(0); }}>{t("Trennen")}</button>
+          </>
+        )}
+        {!connected && <button className="btn primary sm" onClick={() => setSession((n) => n + 1)}>{t("Verbinden")}</button>}
+        {!fill && <button className="btn ghost sm" title={t("In eigenem Fenster öffnen")} onClick={popout}>⧉</button>}
+      </div>
+      <div ref={hostRef} className="remote-screen" />
+      <p className="muted small">{t("Startet on-demand einen VNC-Server am Gerät (nur während der Sitzung, nur lokal). Bei Nutzer-PCs muss die Verbindung ggf. am Gerät bestätigt werden.")}</p>
+    </div>
+  );
+}

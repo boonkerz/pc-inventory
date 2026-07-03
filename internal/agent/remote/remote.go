@@ -56,6 +56,16 @@ func Run(ctx context.Context, client *transport.Client, agentToken string, log *
 				}()
 				handleTerminal(ctx, client, agentToken, s.Session, s.Shell, s.RunAs, log)
 			}(wr)
+		case "open_vnc":
+			log.Info("fernsteuerung angefordert", "session", wr.Session, "consent", wr.Consent)
+			go func(s shared.WaitResponse) {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Error("vnc-session abgebrochen (panic abgefangen)", "session", s.Session, "err", r)
+					}
+				}()
+				handleVNC(ctx, client, agentToken, s.Session, s.Password, s.Consent, log)
+			}(wr)
 		}
 	}
 }

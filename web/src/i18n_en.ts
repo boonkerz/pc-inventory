@@ -491,4 +491,9 @@ export const EN: Record<string, string> = {
   "— keine Remediation —": "— no remediation —",
   "Remediation: Skript bei Fehler automatisch ausführen": "Remediation: run script automatically on failure",
   "Bei Fehler automatisch ausführen": "Runs automatically on failure",
+  "Fernsteuern": "Remote control",
+  "Fernsteuerung konnte nicht gestartet werden.": "Could not start remote session.",
+  "Verbindung verloren": "Connection lost",
+  "Authentifizierung fehlgeschlagen": "Authentication failed",
+  "Startet on-demand einen VNC-Server am Gerät (nur während der Sitzung, nur lokal). Bei Nutzer-PCs muss die Verbindung ggf. am Gerät bestätigt werden.": "Starts a VNC server on the device on demand (only during the session, loopback only). On user PCs the connection may need to be confirmed on the device.",
 };

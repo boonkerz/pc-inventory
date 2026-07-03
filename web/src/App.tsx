@@ -9,6 +9,7 @@ import { Policies } from "./pages/Policies";
 import { Scripts } from "./pages/Scripts";
 import { TwoFactorSetup } from "./pages/TwoFactorSetup";
 import { TerminalPopout } from "./pages/TerminalPopout";
+import { RemotePopout } from "./pages/RemotePopout";
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -20,8 +21,9 @@ export default function App() {
 
   return (
     <Routes>
-      {/* Popout-Terminal: eigenes Vollfenster ohne Layout/Sidebar. */}
+      {/* Popout-Terminal/Fernsteuerung: eigenes Vollfenster ohne Layout/Sidebar. */}
       <Route path="/devices/:id/terminal" element={<TerminalPopout />} />
+      <Route path="/devices/:id/remote" element={<RemotePopout />} />
       <Route path="*" element={
         <Layout>
           <Routes>

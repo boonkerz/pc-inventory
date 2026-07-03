@@ -367,3 +367,11 @@ label input, label select { color: var(--text); }
 /* ---- Token reveal ---- */
 .token-reveal { display: flex; align-items: center; gap: 12px; background: var(--surface-2); border: 1px dashed var(--accent); padding: 12px 14px; border-radius: 8px; margin-bottom: 16px; flex-wrap: wrap; }
 .token-reveal code { background: var(--bg); padding: 4px 8px; border-radius: 5px; }
+
+/* Web-Fernsteuerung (noVNC) */
+.remote-panel { display: flex; flex-direction: column; gap: 8px; }
+.remote-fill, .remote-popout { display: flex; flex-direction: column; height: 100vh; }
+.remote-bar { display: flex; align-items: center; gap: 6px; }
+.remote-bar .spacer { flex: 1; }
+.remote-screen { background: #0b0e14; border-radius: 8px; overflow: hidden; min-height: 360px; }
+.remote-fill .remote-screen, .remote-popout .remote-screen { flex: 1; min-height: 0; border-radius: 0; }

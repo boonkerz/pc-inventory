@@ -196,12 +196,16 @@ type Command struct {
 
 // WaitResponse ist die Antwort des Wake-Long-Polls (/agent/wait). Sie weist den
 // Agent an, sich für eine Echtzeit-Session zu melden. Type ist leer ("" = idle,
-// Timeout ohne Auftrag) oder "open_terminal".
+// Timeout ohne Auftrag), "checkin", "open_terminal" oder "open_vnc".
 type WaitResponse struct {
 	Type    string `json:"type"`
-	Session string `json:"session,omitempty"` // Token der Terminal-Session
+	Session string `json:"session,omitempty"` // Token der Session
 	Shell   string `json:"shell,omitempty"`   // cmd | powershell | shell (oder leer)
 	RunAs   string `json:"runas,omitempty"`   // system | user
+	// Nur bei "open_vnc": Einmalpasswort für den VNC-Server (RFB-Auth) und ob der
+	// angemeldete Nutzer die Verbindung am Gerät bestätigen muss (Zustimmung).
+	Password string `json:"password,omitempty"`
+	Consent  bool   `json:"consent,omitempty"`
 }
 
 // TermControl ist ein Steuer-Frame der Terminal-Daten-WS (als Text/JSON gesendet);

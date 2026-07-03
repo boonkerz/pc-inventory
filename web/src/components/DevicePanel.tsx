@@ -5,6 +5,7 @@ import { api } from "../api";
 import type { Device, Group, ClientTree, Script, CheckEvent, TaskResult, SoftwareEvent } from "../types";
 import { StatusBadge, UpdatesBadge, HealthBadge, TaskHealthBadge, CheckStatusBadge, SeverityBadge, relTime } from "./StatusBadge";
 import { DeviceTerminal } from "./DeviceTerminal";
+import { DeviceRemote } from "./DeviceRemote";
 import { CustomFieldsEditor } from "./CustomFieldsEditor";
 import { TreeSizePanel } from "./TreeSizePanel";
 import { ServicesProcesses } from "./ServicesProcesses";
@@ -16,7 +17,7 @@ import { LiveMetrics } from "./LiveMetrics";
 import { useAuth } from "../auth";
 import { useI18n } from "../i18n";
 
-type Tab = "summary" | "live" | "checks" | "tasks" | "history" | "storage" | "system" | "security" | "events" | "files" | "software" | "updates" | "network" | "run" | "terminal" | "fields";
+type Tab = "summary" | "live" | "checks" | "tasks" | "history" | "storage" | "system" | "security" | "events" | "files" | "software" | "updates" | "network" | "run" | "terminal" | "remote" | "fields";
 
 // fmtSize formatiert Bytes als TB/GB/MB.
 function fmtSize(n: number): string {
@@ -118,6 +119,7 @@ export function DevicePanel({ id }: { id: string }) {
     files: { label: "Dateien", icon: "📁" },
     run: { label: "Ausführen", icon: "▶" },
     terminal: { label: "Terminal", icon: "❯_" },
+    remote: { label: "Fernsteuern", icon: "🖱" },
   };
   const tabGroups: { name: string; icon: string; tabs: Tab[] }[] = [
     { name: "Übersicht", icon: "🖥", tabs: ["summary", "live"] },
@@ -125,7 +127,7 @@ export function DevicePanel({ id }: { id: string }) {
     { name: "Inventar", icon: "📦", tabs: ["software", "updates", "storage", "network", "fields"] },
     { name: "System", icon: "⚙", tabs: ["system", "security", "events"] },
   ];
-  if (canOperate) tabGroups.push({ name: "Zugriff", icon: "❯_", tabs: ["files", "run", "terminal"] });
+  if (canOperate) tabGroups.push({ name: "Zugriff", icon: "❯_", tabs: ["files", "run", "terminal", "remote"] });
 
   const activeGroup = tabGroups.find((g) => g.tabs.includes(tab)) ?? tabGroups[0];
   const tabBadge = (k: Tab) => (
@@ -572,6 +574,12 @@ export function DevicePanel({ id }: { id: string }) {
 
         {tab === "terminal" && canOperate && (
           <DeviceTerminal id={id} os={device.os} />
+        )}
+
+        {tab === "remote" && canOperate && (
+          <section className="card">
+            <DeviceRemote id={id} os={device.os} />
+          </section>
         )}
 
         {tab === "fields" && (

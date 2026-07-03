@@ -55,6 +55,8 @@ func (s *Server) routes() http.Handler {
 				r.Use(s.requireUser)
 				r.Use(s.requireAdmin)
 				r.Get("/devices/{id}/terminal", s.handleDeviceTerminal)
+				r.Post("/devices/{id}/remote/start", s.handleRemoteStart)
+				r.Get("/devices/{id}/remote/ws", s.handleDeviceVNC)
 			})
 		})
 
