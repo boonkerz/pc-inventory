@@ -1,8 +1,61 @@
 # PC-Inventory – Feature-Liste / Roadmap
 
-Stand: laufend gepflegt. Reihenfolge unter „Als nächstes" = aktuelle Priorität.
+Stand: laufend gepflegt. Die ursprüngliche Roadmap ist **komplett umgesetzt**
+(siehe „Erledigt" weiter unten). Der folgende **Ideenpool** sammelt mögliche
+nächste Features – noch nichts davon ist gebaut.
 
-## Als nächstes (in Arbeit)
+## Ideenpool – mögliche nächste Features
+
+### Top-Empfehlungen (größter Mehrwert, bauen auf vorhandener Infrastruktur auf)
+
+- [ ] **Automatisierung / Self-Healing** – „wenn Check X fehlschlägt, führe automatisch
+  Skript Y aus" (Remediation); geplante Auto-Aufgaben (nächtlicher Neustart, wöchentlicher
+  Cleanup). Nutzt Checks + Command-Queue + Skripte. *Das* prägende RMM-Feature, das noch fehlt.
+- [ ] **Metrik-Historie + Verlaufsgraphen** – Zeitreihen für CPU/RAM/Disk/Netz speichern und
+  als Charts (24 h / 7 d / 30 d) zeigen (aktuell nur Live). Basis für Trend-/Kapazitätsalarme.
+- [ ] **Software-Verteilung** – Pakete/Installer gezielt ausrollen (Windows winget/choco,
+  Linux apt/dnf): „installiere Firefox auf allen Geräten dieses Standorts". Ergänzt
+  Patch-Management um Drittsoftware.
+
+### Fernzugriff
+
+- [ ] **Remote-Desktop** – Bildschirm ansehen/steuern (WebRTC/VNC-Tunnel). Groß, aufwändig.
+- [ ] **Sitzungs-/Power-Steuerung** – angemeldete Benutzer abmelden, Nachricht an den Nutzer,
+  Shutdown/Sleep (Neustart + WoL sind vorhanden).
+
+### Sicherheit & Compliance
+
+- [ ] **Schwachstellen-Abgleich** – installierte Softwareversionen gegen CVE-Feeds prüfen.
+- [ ] **Compliance-/Baseline-Checks** (CIS-artig), Firewall-Status, offene Ports,
+  lokale Admin-Konten auditieren.
+
+### Integration & API
+
+- [ ] **Öffentliche REST-API + API-Tokens** für Automatisierung/Skripting von außen.
+- [ ] **Native Slack/Teams/Discord-Alarm-Kanäle** (Webhook/Telegram/ntfy/Pushover vorhanden).
+- [ ] **Webhook-Ausgänge für Ticketsysteme** (PSA-Anbindung).
+
+### Organisation & Daten
+
+- [ ] **Smart Groups** – dynamische Gruppen per Regel (z. B. „OS = Windows & Check fehlerhaft").
+- [ ] **CSV/Excel-Export** von Geräte-/Software-/Audit-Listen.
+- [ ] **Asset-Verwaltung** – Kaufdatum, Garantie, Kosten, Standort (dedizierte Felder).
+- [ ] **Hardware-Änderungs-Tracking** (analog zum Software-Tracking).
+
+### Betrieb
+
+- [ ] **Agent-Installer als MSI/pkg/deb** statt Skript (einfacheres GPO-/MDM-Rollout).
+- [ ] **Server-Backup/Restore** (DB + Config), Konfig-Export.
+- [ ] **Prometheus-`/metrics`-Endpoint** für den Server selbst (Selbstüberwachung).
+- [ ] **Mandantenfähigkeit / MSP-Modus** mit Kunden-Portal (read-only je Kunde) + Branding.
+
+---
+
+## Erledigt
+
+Alle folgenden Punkte sind umgesetzt und live.
+
+## Ursprüngliche Roadmap (umgesetzt)
 
 - [x] **Software-Änderungs-Tracking** – Software-Inventar zwischen Checkins diffen,
   neu installierte / entfernte / aktualisierte Programme protokollieren (Verlauf).
@@ -63,6 +116,9 @@ Stand: laufend gepflegt. Reihenfolge unter „Als nächstes" = aktuelle Priorit�
 - [x] Historie-Pruning (30 Tage), Deploy hinter Reverse-Proxy
 - [x] Dienste & Prozesse (on-demand + Steuerung), Wake-on-LAN, Sammelaktionen
 - [x] Globale Gerätesuche (Hostname, IP/MAC, OS, Seriennr., Software, Custom Fields)
+- [x] Live-Auslastung (CPU je Kern / RAM / Disk / Netzwerk, fortlaufend abgefragt)
+- [x] Zweisprachige Oberfläche (Deutsch / Englisch) mit Sprachumschalter
+- [x] Öffentliches Repo (GitHub): MIT-Lizenz, zweisprachiges README, Screenshots
 
 ## Offene Kleinigkeiten / Schulden
 
