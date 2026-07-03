@@ -42,6 +42,9 @@ type Config struct {
 	// BehindProxy: der Server läuft hinter einem TLS-terminierenden Reverse-Proxy.
 	// Dann bleibt SecureCookie aktiv, obwohl der Server selbst nur HTTP spricht.
 	BehindProxy bool `yaml:"behind_proxy"`
+	// ExternalURL: von außen sichtbare Basis-URL (z.B. https://inventory.example.com).
+	// Wird für Install-Links/One-Liner genutzt; falls leer, aus der Anfrage abgeleitet.
+	ExternalURL string `yaml:"external_url"`
 	// ResultRetention: Aufbewahrungsdauer der Task-/Befehls-Historie; ältere Läufe
 	// werden periodisch gelöscht (0 = nie löschen). Default 30 Tage.
 	ResultRetention time.Duration `yaml:"result_retention"`
@@ -127,6 +130,9 @@ func applyEnv(cfg *Config) {
 	}
 	if v := os.Getenv("PCINV_BEHIND_PROXY"); v != "" {
 		cfg.BehindProxy = v == "true" || v == "1"
+	}
+	if v := os.Getenv("PCINV_EXTERNAL_URL"); v != "" {
+		cfg.ExternalURL = v
 	}
 	if v := os.Getenv("PCINV_SECURE_COOKIE"); v != "" {
 		if b, err := strconv.ParseBool(v); err == nil {

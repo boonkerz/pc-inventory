@@ -41,11 +41,14 @@ func (s *Server) handleInstallScript(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(script))
 }
 
-// externalBaseURL rekonstruiert die von außen sichtbare Basis-URL (hinter einem
-// TLS-terminierenden Reverse-Proxy via X-Forwarded-*).
+// externalBaseURL liefert die von außen sichtbare Basis-URL. Priorität:
+// konfigurierte ExternalURL → X-Forwarded-* → BehindProxy (→ https) → Anfrage.
 func (s *Server) externalBaseURL(r *http.Request) string {
+	if u := strings.TrimRight(s.cfg.ExternalURL, "/"); u != "" {
+		return u
+	}
 	scheme := "http"
-	if r.TLS != nil {
+	if r.TLS != nil || s.cfg.BehindProxy {
 		scheme = "https"
 	}
 	if p := r.Header.Get("X-Forwarded-Proto"); p != "" {
