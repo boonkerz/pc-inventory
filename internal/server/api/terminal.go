@@ -208,11 +208,14 @@ func (s *Server) handleAgentTerminal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c, err := websocket.Accept(w, r, &websocket.AcceptOptions{OriginPatterns: []string{"*"}})
+	c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
+		OriginPatterns:  []string{"*"},
+		CompressionMode: websocket.CompressionContextTakeover, // komprimiert u.a. die RFB-Pixel
+	})
 	if err != nil {
 		return
 	}
-	c.SetReadLimit(1 << 20)
+	c.SetReadLimit(4 << 20)
 	defer c.CloseNow()
 
 	select {

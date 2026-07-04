@@ -157,13 +157,14 @@ func (c *Client) DialTerminal(ctx context.Context, agentToken, session string) (
 	header := http.Header{}
 	header.Set("Authorization", "Bearer "+agentToken)
 	conn, _, err := websocket.Dial(ctx, u, &websocket.DialOptions{
-		HTTPClient: c.stream,
-		HTTPHeader: header,
+		HTTPClient:      c.stream,
+		HTTPHeader:      header,
+		CompressionMode: websocket.CompressionContextTakeover, // komprimiert u.a. die RFB-Pixel
 	})
 	if err != nil {
 		return nil, err
 	}
-	conn.SetReadLimit(1 << 20)
+	conn.SetReadLimit(4 << 20)
 	return conn, nil
 }
 

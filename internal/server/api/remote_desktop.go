@@ -102,7 +102,10 @@ func (s *Server) handleDeviceVNC(w http.ResponseWriter, r *http.Request) {
 	}
 	defer s.term.takeSession(sessID)
 
-	c, err := websocket.Accept(w, r, &websocket.AcceptOptions{OriginPatterns: []string{"*"}})
+	c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
+		OriginPatterns:  []string{"*"},
+		CompressionMode: websocket.CompressionContextTakeover, // permessage-deflate: komprimiert die RFB-Pixel
+	})
 	if err != nil {
 		return
 	}
