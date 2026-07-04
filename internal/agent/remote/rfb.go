@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"fmt"
@@ -81,6 +82,7 @@ func rfbServe(ctx context.Context, conn io.ReadWriter, src screenSource, log *sl
 	}
 
 	var lastFrame time.Time
+	var prev []byte // letztes gesendetes Vollbild (für Dirty-Rectangle-Diff)
 	hdr := make([]byte, 1)
 	for {
 		if ctx.Err() != nil {
@@ -102,8 +104,9 @@ func rfbServe(ctx context.Context, conn io.ReadWriter, src screenSource, log *sl
 			if err := skip(conn, int(binary.BigEndian.Uint16(b[1:]))*4); err != nil {
 				return err
 			}
-		case 3: // FramebufferUpdateRequest
-			if err := skip(conn, 9); err != nil {
+		case 3: // FramebufferUpdateRequest: incremental(1) + x,y,w,h (je 2)
+			req := make([]byte, 9)
+			if _, err := io.ReadFull(conn, req); err != nil {
 				return err
 			}
 			// grobe Ratenbegrenzung (~15 fps), damit wir nicht durchdrehen
@@ -111,9 +114,11 @@ func rfbServe(ctx context.Context, conn io.ReadWriter, src screenSource, log *sl
 				time.Sleep(66*time.Millisecond - d)
 			}
 			lastFrame = time.Now()
-			if err := sendFrame(conn, src, w, h); err != nil {
+			np, err := sendFrame(conn, src, prev, w, h, req[0] != 0)
+			if err != nil {
 				return err
 			}
+			prev = np
 		case 4: // KeyEvent: down-flag(1) + padding(2) + keysym(4)
 			b := make([]byte, 7)
 			if _, err := io.ReadFull(conn, b); err != nil {
@@ -144,40 +149,104 @@ func rfbServe(ctx context.Context, conn io.ReadWriter, src screenSource, log *sl
 	}
 }
 
-// sendFrame überträgt den kompletten Bildschirm als ein Raw-Rechteck.
-func sendFrame(conn io.Writer, src screenSource, w, h int) error {
-	px, err := src.Capture()
-	if err != nil || len(px) < w*h*4 {
-		// leeres Update senden, damit der Client nicht hängt
-		empty := []byte{0, 0, 0, 0} // msg-type 0, padding, num-rects=0
-		_, werr := conn.Write(empty)
-		return werr
+// sendFrame überträgt bei incremental nur den geänderten Bereich (Dirty-Rectangle),
+// sonst das Vollbild – jeweils als Raw-Rechteck. Liefert das aktualisierte
+// „prev"-Vollbild für den nächsten Diff zurück.
+func sendFrame(conn io.Writer, src screenSource, prev []byte, w, h int, incremental bool) ([]byte, error) {
+	cur, err := src.Capture()
+	if err != nil || len(cur) < w*h*4 {
+		_, werr := conn.Write([]byte{0, 0, 0, 0}) // leeres Update
+		return prev, werr
 	}
-	msg := make([]byte, 0, 4+12)
+	cur = cur[:w*h*4]
+
+	x0, y0, x1, y1 := 0, 0, w-1, h-1
+	if incremental && prev != nil {
+		x0, y0, x1, y1 = diffRect(prev, cur, w, h)
+		if x1 < x0 { // keine Änderung
+			_, werr := conn.Write([]byte{0, 0, 0, 0})
+			return prev, werr
+		}
+	}
+	rw, rh := x1-x0+1, y1-y0+1
+
+	msg := make([]byte, 0, 16)
 	msg = append(msg, 0, 0) // FramebufferUpdate, padding
 	msg = be16(msg, 1)      // 1 Rechteck
-	msg = be16(msg, 0)      // x
-	msg = be16(msg, 0)      // y
-	msg = be16(msg, w)
-	msg = be16(msg, h)
+	msg = be16(msg, x0)
+	msg = be16(msg, y0)
+	msg = be16(msg, rw)
+	msg = be16(msg, rh)
 	msg = be32(msg, 0) // Encoding 0 = Raw
 	if _, err := conn.Write(msg); err != nil {
+		return prev, err
+	}
+	// Zeilen des Teilrechtecks senden; Chunks < WS-Nachrichtenlimit.
+	stride := w * 4
+	buf := make([]byte, 0, 256*1024)
+	flush := func() error {
+		if len(buf) == 0 {
+			return nil
+		}
+		_, err := conn.Write(buf)
+		buf = buf[:0]
 		return err
 	}
-	// In Chunks schreiben: der WS-Relay begrenzt die Nachrichtengröße (< 1 MB).
-	data := px[:w*h*4]
-	const chunk = 200 * 1024
-	for len(data) > 0 {
-		n := chunk
-		if n > len(data) {
-			n = len(data)
+	for y := y0; y <= y1; y++ {
+		row := cur[y*stride+x0*4 : y*stride+(x1+1)*4]
+		if len(buf)+len(row) > 256*1024 {
+			if err := flush(); err != nil {
+				return prev, err
+			}
 		}
-		if _, err := conn.Write(data[:n]); err != nil {
-			return err
-		}
-		data = data[n:]
+		buf = append(buf, row...)
 	}
-	return nil
+	if err := flush(); err != nil {
+		return prev, err
+	}
+
+	// prev auf das aktuelle Vollbild aktualisieren.
+	if len(prev) != len(cur) {
+		prev = make([]byte, len(cur))
+	}
+	copy(prev, cur)
+	return prev, nil
+}
+
+// diffRect liefert die Bounding-Box (x0,y0)-(x1,y1) der geänderten Pixel zwischen
+// prev und cur. Bei keiner Änderung ist x1 < x0.
+func diffRect(prev, cur []byte, w, h int) (int, int, int, int) {
+	stride := w * 4
+	x0, y0, x1, y1 := w, h, -1, -1
+	for y := 0; y < h; y++ {
+		rs := y * stride
+		if bytes.Equal(prev[rs:rs+stride], cur[rs:rs+stride]) {
+			continue
+		}
+		if y < y0 {
+			y0 = y
+		}
+		y1 = y
+		// linke Kante
+		lx := 0
+		for lx < w && prev[rs+lx*4] == cur[rs+lx*4] && prev[rs+lx*4+1] == cur[rs+lx*4+1] &&
+			prev[rs+lx*4+2] == cur[rs+lx*4+2] {
+			lx++
+		}
+		if lx < x0 {
+			x0 = lx
+		}
+		// rechte Kante
+		rx := w - 1
+		for rx > lx && prev[rs+rx*4] == cur[rs+rx*4] && prev[rs+rx*4+1] == cur[rs+rx*4+1] &&
+			prev[rs+rx*4+2] == cur[rs+rx*4+2] {
+			rx--
+		}
+		if rx > x1 {
+			x1 = rx
+		}
+	}
+	return x0, y0, x1, y1
 }
 
 func be16(b []byte, v int) []byte { return append(b, byte(v>>8), byte(v)) }
