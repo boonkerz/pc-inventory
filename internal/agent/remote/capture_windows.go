@@ -76,7 +76,6 @@ func newScreenSource(log *slog.Logger) (screenSource, error) {
 	}
 	memDC, _, _ := procCreateCompatDC.Call(screen)
 	bitmap, _, _ := procCreateCompatBmp.Call(screen, w, h)
-	procSelectObject.Call(memDC, bitmap)
 
 	s := &gdiSource{w: int(w), h: int(h), screen: screen, memDC: memDC, bitmap: bitmap}
 	s.buf = make([]byte, s.w*s.h*4)
@@ -95,7 +94,11 @@ func newScreenSource(log *slog.Logger) (screenSource, error) {
 func (s *gdiSource) Bounds() (int, int) { return s.w, s.h }
 
 func (s *gdiSource) Capture() ([]byte, error) {
+	// Bitmap für den BitBlt selektieren …
+	old, _, _ := procSelectObject.Call(s.memDC, s.bitmap)
 	r, _, _ := procBitBlt.Call(s.memDC, 0, 0, uintptr(s.w), uintptr(s.h), s.screen, 0, 0, srcCopy)
+	// … und VOR GetDIBits wieder deselektieren (sonst liefert GetDIBits schwarz).
+	procSelectObject.Call(s.memDC, old)
 	if r == 0 {
 		return nil, fmt.Errorf("BitBlt fehlgeschlagen")
 	}
