@@ -37,6 +37,33 @@ type inputSink interface {
 	Key(down bool, keysym uint32)
 }
 
+// clipboardSource synchronisiert die Zwischenablage. GetClipboard liefert den Text
+// nur, wenn er sich seit dem letzten Aufruf geändert hat.
+type clipboardSource interface {
+	GetClipboard() (text string, changed bool)
+	SetClipboard(text string)
+}
+
+// latin1Decode/Encode: RFB-CutText ist Latin-1 (Zeichen > 255 gehen verloren).
+func latin1Decode(b []byte) string {
+	r := make([]rune, len(b))
+	for i, c := range b {
+		r[i] = rune(c)
+	}
+	return string(r)
+}
+
+func latin1Encode(s string) []byte {
+	out := make([]byte, 0, len(s))
+	for _, r := range s {
+		if r > 255 {
+			r = '?'
+		}
+		out = append(out, byte(r))
+	}
+	return out
+}
+
 // rfbPixelFormat: 32 bpp, Tiefe 24, little-endian, TrueColor, Shifts R=16/G=8/B=0.
 func rfbPixelFormat() []byte {
 	return []byte{
@@ -83,7 +110,7 @@ func rfbServe(ctx context.Context, conn io.ReadWriter, src screenSource, log *sl
 		return err
 	}
 
-	var lastFrame time.Time
+	var lastFrame, lastClipPoll time.Time
 	tight := false // Client unterstützt Tight-Encoding (7)?
 	fctx := &frameCtx{}
 	hdr := make([]byte, 1)
@@ -127,6 +154,18 @@ func rfbServe(ctx context.Context, conn io.ReadWriter, src screenSource, log *sl
 			if err := fctx.send(conn, src, w, h, req[0] != 0, tight); err != nil {
 				return err
 			}
+			// Zwischenablage Gerät → Browser (gedrosselt pollen).
+			if cs, ok := src.(clipboardSource); ok && time.Since(lastClipPoll) > 700*time.Millisecond {
+				lastClipPoll = time.Now()
+				if text, changed := cs.GetClipboard(); changed {
+					msg := []byte{3, 0, 0, 0}
+					b := latin1Encode(text)
+					msg = be32(msg, len(b))
+					if _, err := conn.Write(append(msg, b...)); err != nil {
+						return err
+					}
+				}
+			}
 		case 4: // KeyEvent: down-flag(1) + padding(2) + keysym(4)
 			b := make([]byte, 7)
 			if _, err := io.ReadFull(conn, b); err != nil {
@@ -143,13 +182,18 @@ func rfbServe(ctx context.Context, conn io.ReadWriter, src screenSource, log *sl
 			if in, ok := src.(inputSink); ok {
 				in.Pointer(int(b[0]), int(binary.BigEndian.Uint16(b[1:])), int(binary.BigEndian.Uint16(b[3:])))
 			}
-		case 6: // ClientCutText (1+3 padding... eig. 3 padding + 4 len + len)
+		case 6: // ClientCutText: 3 padding + 4 length + Text (Browser → Gerät)
 			b := make([]byte, 7)
 			if _, err := io.ReadFull(conn, b); err != nil {
 				return err
 			}
-			if err := skip(conn, int(binary.BigEndian.Uint32(b[3:]))); err != nil {
+			n := int(binary.BigEndian.Uint32(b[3:]))
+			text := make([]byte, n)
+			if _, err := io.ReadFull(conn, text); err != nil {
 				return err
+			}
+			if cs, ok := src.(clipboardSource); ok && n > 0 {
+				cs.SetClipboard(latin1Decode(text))
 			}
 		default:
 			return fmt.Errorf("unbekannte RFB-Nachricht %d", hdr[0])

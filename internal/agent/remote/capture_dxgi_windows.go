@@ -94,6 +94,7 @@ type dxgiSource struct {
 	dib      uintptr
 	buf      []byte // Slice über den DIB-Speicher (Cursor wird hier einkomponiert)
 	prevMask int
+	winClipboard
 }
 
 func newDXGISource(log *slog.Logger) (screenSource, error) {

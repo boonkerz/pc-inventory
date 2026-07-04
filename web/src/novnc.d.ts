@@ -8,5 +8,6 @@ declare module "@novnc/novnc" {
     disconnect(): void;
     sendCredentials(creds: { password?: string }): void;
     sendCtrlAltDel(): void;
+    clipboardPasteFrom(text: string): void;
   }
 }

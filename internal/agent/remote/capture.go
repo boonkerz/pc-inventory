@@ -58,6 +58,19 @@ func (r *resilientSource) Key(down bool, keysym uint32) {
 	}
 }
 
+func (r *resilientSource) GetClipboard() (string, bool) {
+	if cs, ok := r.inner.(clipboardSource); ok {
+		return cs.GetClipboard()
+	}
+	return "", false
+}
+
+func (r *resilientSource) SetClipboard(text string) {
+	if cs, ok := r.inner.(clipboardSource); ok {
+		cs.SetClipboard(text)
+	}
+}
+
 func (r *resilientSource) Close() error {
 	if r.inner != nil {
 		return r.inner.Close()

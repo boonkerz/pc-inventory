@@ -69,6 +69,10 @@ export function DeviceRemote({ id, os, fill, autoStart }: {
       });
       rfb.addEventListener("credentialsrequired", () => rfb.sendCredentials({ password: start.password }));
       rfb.addEventListener("securityfailure", () => setStatus(t("Authentifizierung fehlgeschlagen")));
+      // Zwischenablage Gerät → Browser: in die lokale Zwischenablage schreiben.
+      rfb.addEventListener("clipboard", (e: any) => {
+        if (e?.detail?.text) navigator.clipboard?.writeText(e.detail.text).catch(() => {});
+      });
     })();
 
     return () => {
@@ -86,6 +90,10 @@ export function DeviceRemote({ id, os, fill, autoStart }: {
         {connected && (
           <>
             <button className="btn ghost sm" onClick={() => rfbRef.current?.sendCtrlAltDel()}>Ctrl+Alt+Entf</button>
+            <button className="btn ghost sm" title={t("Lokale Zwischenablage zum Gerät senden")}
+              onClick={() => navigator.clipboard?.readText().then((tx) => rfbRef.current?.clipboardPasteFrom(tx)).catch(() => {})}>
+              📋 → {t("Gerät")}
+            </button>
             <button className="btn ghost sm" onClick={() => setSession((n) => n + 1)}>{t("Neu verbinden")}</button>
             <button className="btn ghost sm" onClick={() => { try { rfbRef.current?.disconnect(); } catch { /* */ } setSession(0); }}>{t("Trennen")}</button>
           </>

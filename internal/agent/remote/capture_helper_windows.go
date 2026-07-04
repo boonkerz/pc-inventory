@@ -124,6 +124,35 @@ func RunCaptureHelper() {
 			if in, ok := src.(inputSink); ok {
 				in.Key(arg[0] != 0, binary.LittleEndian.Uint32(arg[1:]))
 			}
+		case cmdSetClipboard: // len(4 LE) + Text (UTF-8)
+			l := make([]byte, 4)
+			if _, err := io.ReadFull(os.Stdin, l); err != nil {
+				return
+			}
+			text := make([]byte, binary.LittleEndian.Uint32(l))
+			if _, err := io.ReadFull(os.Stdin, text); err != nil {
+				return
+			}
+			if cs, ok := src.(clipboardSource); ok {
+				cs.SetClipboard(string(text))
+			}
+		case cmdGetClipboard: // Antwort: changed(1) [+ len(4 LE) + Text]
+			var text string
+			var changed bool
+			if cs, ok := src.(clipboardSource); ok {
+				text, changed = cs.GetClipboard()
+			}
+			if !changed {
+				if _, err := os.Stdout.Write([]byte{0}); err != nil {
+					return
+				}
+			} else {
+				resp := []byte{1, 0, 0, 0, 0}
+				binary.LittleEndian.PutUint32(resp[1:], uint32(len(text)))
+				if _, err := os.Stdout.Write(append(resp, text...)); err != nil {
+					return
+				}
+			}
 		default:
 			return
 		}
@@ -131,9 +160,11 @@ func RunCaptureHelper() {
 }
 
 const (
-	cmdCapture = 1
-	cmdPointer = 2
-	cmdKey     = 3
+	cmdCapture      = 1
+	cmdPointer      = 2
+	cmdKey          = 3
+	cmdGetClipboard = 4
+	cmdSetClipboard = 5
 )
 
 type helperSource struct {
@@ -269,6 +300,31 @@ func (h *helperSource) Key(down bool, keysym uint32) {
 	}
 	binary.LittleEndian.PutUint32(b[2:], keysym)
 	_, _ = h.stdinW.Write(b)
+}
+
+func (h *helperSource) SetClipboard(text string) {
+	b := []byte{cmdSetClipboard, 0, 0, 0, 0}
+	binary.LittleEndian.PutUint32(b[1:], uint32(len(text)))
+	_, _ = h.stdinW.Write(append(b, text...))
+}
+
+func (h *helperSource) GetClipboard() (string, bool) {
+	if _, err := h.stdinW.Write([]byte{cmdGetClipboard}); err != nil {
+		return "", false
+	}
+	flag := make([]byte, 1)
+	if _, err := io.ReadFull(h.stdoutR, flag); err != nil || flag[0] == 0 {
+		return "", false
+	}
+	l := make([]byte, 4)
+	if _, err := io.ReadFull(h.stdoutR, l); err != nil {
+		return "", false
+	}
+	text := make([]byte, binary.LittleEndian.Uint32(l))
+	if _, err := io.ReadFull(h.stdoutR, text); err != nil {
+		return "", false
+	}
+	return string(text), true
 }
 
 func (h *helperSource) Close() error {

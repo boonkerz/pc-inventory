@@ -109,6 +109,7 @@ type gdiSource struct {
 	buf      []byte
 	bmi      bitmapInfo
 	prevMask int // zuletzt gesehene Maustasten-Maske (für Down/Up-Erkennung)
+	winClipboard
 }
 
 func newGDISource(log *slog.Logger) (screenSource, error) {

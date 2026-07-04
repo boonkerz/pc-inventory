@@ -504,4 +504,5 @@ export const EN: Record<string, string> = {
   "nachfragen": "ask",
   "unbeaufsichtigt": "unattended",
   "— nachfragen verlangt eine Bestätigung am Gerät (für Nutzer-PCs), unbeaufsichtigt für Server.": "— ask requires confirmation on the device (for user PCs), unattended for servers.",
+  "Lokale Zwischenablage zum Gerät senden": "Send local clipboard to the device",
 };
