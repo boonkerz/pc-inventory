@@ -72,7 +72,7 @@ func handleVNC(ctx context.Context, client *transport.Client, agentToken, sessio
 	}
 	defer conn.CloseNow()
 
-	src, err := newScreenSource(log)
+	src, err := newResilientSource(log)
 	if err != nil {
 		log.Warn("bildschirmaufnahme nicht verfügbar", "err", err)
 		conn.Close(websocket.StatusInternalError, "keine aufnahme")

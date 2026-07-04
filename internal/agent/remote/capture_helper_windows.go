@@ -25,10 +25,24 @@ import (
 func newScreenSource(log *slog.Logger) (screenSource, error) {
 	if s, err := startCaptureHelper(log); err == nil {
 		return s, nil
+	} else if inSession0() {
+		// Dienst ohne aufnehmbare Nutzer-Session (z.B. niemand angemeldet /
+		// Login-Screen). Fehler zurückgeben, damit die resiliente Quelle wartet
+		// und erneut versucht, statt nutzlos die (schwarze) Session 0 aufzunehmen.
+		return nil, fmt.Errorf("keine aufnehmbare sitzung: %w", err)
 	} else {
 		log.Info("nutzer-session-helfer nicht verfügbar – direkte Aufnahme", "err", err)
 	}
 	return newCaptureSource(log)
+}
+
+var procProcessIdToSessionId = modKernel32.NewProc("ProcessIdToSessionId")
+
+// inSession0 meldet, ob der Agent selbst in Session 0 läuft (also als Dienst).
+func inSession0() bool {
+	var sid uint32
+	r, _, _ := procProcessIdToSessionId.Call(uintptr(windows.GetCurrentProcessId()), uintptr(unsafe.Pointer(&sid)))
+	return r != 0 && sid == 0
 }
 
 // RunCaptureHelper ist der __capture-Modus: läuft in der Nutzer-Session, nimmt den
