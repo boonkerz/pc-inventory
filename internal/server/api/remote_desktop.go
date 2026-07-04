@@ -83,10 +83,47 @@ func (s *Server) handleRemoteStart(w http.ResponseWriter, r *http.Request) {
 }
 
 // resolveRemoteConsent ermittelt, ob der Nutzer am Gerät die Fernsteuerung
-// bestätigen muss. Phase 1: standardmäßig unbeaufsichtigt (false); die
-// zielgruppenabhängige Auflösung (device→site→client) folgt in Phase 3.
+// bestätigen muss (zielgruppenabhängig, Vererbung device→site→client).
 func (s *Server) resolveRemoteConsent(ctx context.Context, deviceID string) bool {
-	return false
+	mode, _ := s.store.ResolveRemoteConsent(ctx, deviceID)
+	return mode == "prompt"
+}
+
+// handleGetDeviceConsent liefert den effektiven und den explizit gesetzten
+// Zustimmungs-Modus eines Geräts.
+func (s *Server) handleGetDeviceConsent(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	eff, _ := s.store.ResolveRemoteConsent(r.Context(), id)
+	own, _ := s.store.GetRemoteConsent(r.Context(), "device", id)
+	s.writeJSON(w, http.StatusOK, map[string]string{"effective": eff, "device": own})
+}
+
+// handleSetRemoteConsent setzt den Modus für ein Ziel (device|site|client).
+// mode "" = erben. requireAdmin.
+func (s *Server) handleSetRemoteConsent(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		TargetType string `json:"target_type"`
+		TargetID   string `json:"target_id"`
+		Mode       string `json:"mode"`
+	}
+	if !s.decodeJSON(w, r, &req) {
+		return
+	}
+	switch req.TargetType {
+	case "device", "site", "client":
+	default:
+		s.writeErr(w, http.StatusBadRequest, "target_type muss device|site|client sein")
+		return
+	}
+	if req.Mode != "" && req.Mode != "unattended" && req.Mode != "prompt" {
+		s.writeErr(w, http.StatusBadRequest, "mode muss unattended|prompt (oder leer) sein")
+		return
+	}
+	if err := s.store.SetRemoteConsent(r.Context(), req.TargetType, req.TargetID, req.Mode); err != nil {
+		s.mapStoreErr(w, err)
+		return
+	}
+	s.writeJSON(w, http.StatusOK, map[string]string{"ok": "1"})
 }
 
 // handleDeviceVNC nimmt die noVNC-WS des Browsers entgegen und relayed sie an die

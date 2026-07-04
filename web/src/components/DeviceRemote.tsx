@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import RFB from "@novnc/novnc";
 import { useI18n } from "../i18n";
 import { api } from "../api";
+import { useAuth } from "../auth";
 
 // DeviceRemote öffnet eine Web-Fernsteuerung (Remote Desktop) über noVNC. Der Server
 // startet on-demand einen VNC-Server am Gerät und tunnelt die RFB-Bytes über eine
@@ -11,11 +12,25 @@ export function DeviceRemote({ id, os, fill, autoStart }: {
   id: string; os: string; fill?: boolean; autoStart?: boolean;
 }) {
   const { t } = useI18n();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [status, setStatus] = useState("");
   const [connected, setConnected] = useState(false);
   const [session, setSession] = useState(autoStart ? 1 : 0); // hochzählen = (neu) verbinden
   const hostRef = useRef<HTMLDivElement>(null);
   const rfbRef = useRef<any>(null);
+
+  // Zustimmungs-Modus (device-level; "" = erben). Nur für Admin steuerbar.
+  const [consent, setConsent] = useState<{ effective: string; device: string } | null>(null);
+  useEffect(() => {
+    if (!isAdmin || fill) return; // im Popout nicht anzeigen
+    api.get<{ effective: string; device: string }>(`/devices/${id}/remote-consent`).then(setConsent).catch(() => {});
+  }, [id, isAdmin, fill]);
+  const setConsentMode = async (mode: string) => {
+    await api.put(`/remote-consent`, { target_type: "device", target_id: id, mode });
+    const c = await api.get<{ effective: string; device: string }>(`/devices/${id}/remote-consent`);
+    setConsent(c);
+  };
 
   const popout = () => {
     window.open(`/devices/${id}/remote?os=${encodeURIComponent(os)}`, `remote-${id}`,
@@ -79,6 +94,17 @@ export function DeviceRemote({ id, os, fill, autoStart }: {
         {!fill && <button className="btn ghost sm" title={t("In eigenem Fenster öffnen")} onClick={popout}>⧉</button>}
       </div>
       <div ref={hostRef} className="remote-screen" />
+      {consent && (
+        <p className="muted small">
+          {t("Zustimmung")}:{" "}
+          <select value={consent.device} onChange={(e) => setConsentMode(e.target.value)}>
+            <option value="">{t("Erben")} ({consent.effective === "prompt" ? t("nachfragen") : t("unbeaufsichtigt")})</option>
+            <option value="unattended">{t("unbeaufsichtigt")}</option>
+            <option value="prompt">{t("nachfragen")}</option>
+          </select>{" "}
+          {t("— nachfragen verlangt eine Bestätigung am Gerät (für Nutzer-PCs), unbeaufsichtigt für Server.")}
+        </p>
+      )}
       <p className="muted small">{t("Startet on-demand einen VNC-Server am Gerät (nur während der Sitzung, nur lokal). Bei Nutzer-PCs muss die Verbindung ggf. am Gerät bestätigt werden.")}</p>
     </div>
   );

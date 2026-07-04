@@ -15,13 +15,20 @@ import (
 // Er verbindet sich per WebSocket mit dem Server und fährt darauf den eingebauten
 // RFB-Server (rfb.go), der den Bildschirm aufnimmt und Eingaben umsetzt. Keine
 // Fremdsoftware.
-func handleVNC(ctx context.Context, client *transport.Client, agentToken, session, _ string, _ bool, log *slog.Logger) {
+func handleVNC(ctx context.Context, client *transport.Client, agentToken, session, _ string, consent bool, log *slog.Logger) {
 	conn, err := client.DialTerminal(ctx, agentToken, session)
 	if err != nil {
 		log.Warn("vnc-websocket fehlgeschlagen", "err", err)
 		return
 	}
 	defer conn.CloseNow()
+
+	// Zielgruppenabhängige Zustimmung: der angemeldete Nutzer muss bestätigen.
+	if consent && !confirmRemote(log) {
+		log.Info("fernsteuerung am gerät abgelehnt/keine antwort")
+		conn.Close(websocket.StatusPolicyViolation, "am gerät abgelehnt")
+		return
+	}
 
 	src, err := newResilientSource(log)
 	if err != nil {

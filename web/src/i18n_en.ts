@@ -499,4 +499,9 @@ export const EN: Record<string, string> = {
   "Schnell: in einer PowerShell als Administrator ausführen:": "Quick: run in an elevated PowerShell (Administrator):",
   "Schnell: mit Root-Rechten ausführen:": "Quick: run with root privileges:",
   "Oder das vollständige Skript:": "Or the full script:",
+  "Zustimmung": "Consent",
+  "Erben": "Inherit",
+  "nachfragen": "ask",
+  "unbeaufsichtigt": "unattended",
+  "— nachfragen verlangt eine Bestätigung am Gerät (für Nutzer-PCs), unbeaufsichtigt für Server.": "— ask requires confirmation on the device (for user PCs), unattended for servers.",
 };

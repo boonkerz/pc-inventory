@@ -669,3 +669,33 @@ func TestReportSchedules(t *testing.T) {
 		t.Fatalf("nach 8 Tagen wieder fällig, bekam %d", len(due))
 	}
 }
+
+func TestRemoteConsent(t *testing.T) {
+	st := newStore(t)
+	ctx := context.Background()
+	dev := &model.Device{ID: store.NewID(), Hostname: "pc", OS: "windows"}
+	if err := st.CreateDevice(ctx, dev, auth.HashToken("t")); err != nil {
+		t.Fatalf("CreateDevice: %v", err)
+	}
+	// Default: unbeaufsichtigt
+	if m, err := st.ResolveRemoteConsent(ctx, dev.ID); err != nil || m != "unattended" {
+		t.Fatalf("default: %v / %v", m, err)
+	}
+	// Gerät auf prompt setzen
+	if err := st.SetRemoteConsent(ctx, "device", dev.ID, "prompt"); err != nil {
+		t.Fatalf("Set: %v", err)
+	}
+	if m, _ := st.ResolveRemoteConsent(ctx, dev.ID); m != "prompt" {
+		t.Fatalf("nach set: %s", m)
+	}
+	if m, _ := st.GetRemoteConsent(ctx, "device", dev.ID); m != "prompt" {
+		t.Fatalf("GetRemoteConsent: %s", m)
+	}
+	// Wieder erben (löschen) -> Default
+	if err := st.SetRemoteConsent(ctx, "device", dev.ID, ""); err != nil {
+		t.Fatalf("Clear: %v", err)
+	}
+	if m, _ := st.ResolveRemoteConsent(ctx, dev.ID); m != "unattended" {
+		t.Fatalf("nach clear: %s", m)
+	}
+}
