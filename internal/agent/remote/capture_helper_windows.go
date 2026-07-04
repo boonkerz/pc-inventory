@@ -42,6 +42,7 @@ func RunCaptureHelper() {
 		os.Exit(2)
 	}
 	defer src.Close()
+	in, _ := src.(inputSink)
 	w, h := src.Bounds()
 	hdr := make([]byte, 8)
 	binary.LittleEndian.PutUint32(hdr[0:], uint32(w))
@@ -49,20 +50,46 @@ func RunCaptureHelper() {
 	if _, err := os.Stdout.Write(hdr); err != nil {
 		return
 	}
-	req := make([]byte, 1)
+	cmd := make([]byte, 1)
+	arg := make([]byte, 5)
 	for {
-		if _, err := io.ReadFull(os.Stdin, req); err != nil {
+		if _, err := io.ReadFull(os.Stdin, cmd); err != nil {
 			return
 		}
-		px, err := src.Capture()
-		if err != nil {
-			return
-		}
-		if _, err := os.Stdout.Write(px[:w*h*4]); err != nil {
+		switch cmd[0] {
+		case cmdCapture:
+			px, err := src.Capture()
+			if err != nil {
+				return
+			}
+			if _, err := os.Stdout.Write(px[:w*h*4]); err != nil {
+				return
+			}
+		case cmdPointer: // mask(1) + x(2 LE) + y(2 LE)
+			if _, err := io.ReadFull(os.Stdin, arg); err != nil {
+				return
+			}
+			if in != nil {
+				in.Pointer(int(arg[0]), int(binary.LittleEndian.Uint16(arg[1:])), int(binary.LittleEndian.Uint16(arg[3:])))
+			}
+		case cmdKey: // down(1) + keysym(4 LE)
+			if _, err := io.ReadFull(os.Stdin, arg); err != nil {
+				return
+			}
+			if in != nil {
+				in.Key(arg[0] != 0, binary.LittleEndian.Uint32(arg[1:]))
+			}
+		default:
 			return
 		}
 	}
 }
+
+const (
+	cmdCapture = 1
+	cmdPointer = 2
+	cmdKey     = 3
+)
 
 type helperSource struct {
 	proc    windows.Handle
@@ -169,13 +196,30 @@ func startCaptureHelper(log *slog.Logger) (screenSource, error) {
 func (h *helperSource) Bounds() (int, int) { return h.w, h.h }
 
 func (h *helperSource) Capture() ([]byte, error) {
-	if _, err := h.stdinW.Write([]byte{1}); err != nil {
+	if _, err := h.stdinW.Write([]byte{cmdCapture}); err != nil {
 		return nil, err
 	}
 	if _, err := io.ReadFull(h.stdoutR, h.buf); err != nil {
 		return nil, err
 	}
 	return h.buf, nil
+}
+
+// Pointer/Key reichen die Eingabe an den Helfer weiter (der SendInput ausführt).
+func (h *helperSource) Pointer(mask, x, y int) {
+	b := []byte{cmdPointer, byte(mask), 0, 0, 0, 0}
+	binary.LittleEndian.PutUint16(b[2:], uint16(x))
+	binary.LittleEndian.PutUint16(b[4:], uint16(y))
+	_, _ = h.stdinW.Write(b)
+}
+
+func (h *helperSource) Key(down bool, keysym uint32) {
+	b := []byte{cmdKey, 0, 0, 0, 0, 0}
+	if down {
+		b[1] = 1
+	}
+	binary.LittleEndian.PutUint32(b[2:], keysym)
+	_, _ = h.stdinW.Write(b)
 }
 
 func (h *helperSource) Close() error {

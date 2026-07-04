@@ -16,7 +16,7 @@ func newSyntheticSource() *syntheticSource {
 }
 
 func (s *syntheticSource) Bounds() (int, int) { return s.w, s.h }
-func (s *syntheticSource) Close() error        { return nil }
+func (s *syntheticSource) Close() error       { return nil }
 
 func (s *syntheticSource) Capture() ([]byte, error) {
 	t := int(time.Now().UnixMilli() / 40)

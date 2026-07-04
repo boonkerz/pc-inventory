@@ -13,7 +13,7 @@ func TestUnzipTo(t *testing.T) {
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)
 	for name, content := range map[string]string{
-		"winvnc.exe":   "MZ-fake",
+		"winvnc.exe":    "MZ-fake",
 		"sub/extra.dll": "dll-bytes",
 	} {
 		f, err := zw.Create(name)

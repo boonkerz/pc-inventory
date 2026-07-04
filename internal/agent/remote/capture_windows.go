@@ -56,12 +56,13 @@ type bitmapInfo struct {
 // den Desktop des angemeldeten Nutzers (Session-0-Isolation) – dann ist die
 // Aufnahme schwarz. Interaktiv/in der Nutzer-Session liefert sie den Bildschirm.
 type gdiSource struct {
-	w, h   int
-	screen uintptr
-	memDC  uintptr
-	bitmap uintptr
-	buf    []byte
-	bmi    bitmapInfo
+	w, h     int
+	screen   uintptr
+	memDC    uintptr
+	bitmap   uintptr
+	buf      []byte
+	bmi      bitmapInfo
+	prevMask int // zuletzt gesehene Maustasten-Maske (für Down/Up-Erkennung)
 }
 
 func newGDISource(log *slog.Logger) (screenSource, error) {

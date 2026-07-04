@@ -26,6 +26,14 @@ type screenSource interface {
 	Close() error
 }
 
+// inputSink nimmt Maus-/Tastatureingaben entgegen. Quellen, die das umsetzen können
+// (Windows), spielen sie ins System ein; sonst bleibt die Sitzung view-only.
+// x,y sind Framebuffer-Koordinaten; keysym ist ein X11-Keysym (RFB).
+type inputSink interface {
+	Pointer(buttonMask, x, y int)
+	Key(down bool, keysym uint32)
+}
+
 // rfbPixelFormat: 32 bpp, Tiefe 24, little-endian, TrueColor, Shifts R=16/G=8/B=0.
 func rfbPixelFormat() []byte {
 	return []byte{
@@ -106,13 +114,21 @@ func rfbServe(ctx context.Context, conn io.ReadWriter, src screenSource, log *sl
 			if err := sendFrame(conn, src, w, h); err != nil {
 				return err
 			}
-		case 4: // KeyEvent (view-only: verwerfen)
-			if err := skip(conn, 7); err != nil {
+		case 4: // KeyEvent: down-flag(1) + padding(2) + keysym(4)
+			b := make([]byte, 7)
+			if _, err := io.ReadFull(conn, b); err != nil {
 				return err
 			}
-		case 5: // PointerEvent (view-only: verwerfen)
-			if err := skip(conn, 5); err != nil {
+			if in, ok := src.(inputSink); ok {
+				in.Key(b[0] != 0, binary.BigEndian.Uint32(b[3:]))
+			}
+		case 5: // PointerEvent: button-mask(1) + x(2) + y(2)
+			b := make([]byte, 5)
+			if _, err := io.ReadFull(conn, b); err != nil {
 				return err
+			}
+			if in, ok := src.(inputSink); ok {
+				in.Pointer(int(b[0]), int(binary.BigEndian.Uint16(b[1:])), int(binary.BigEndian.Uint16(b[3:])))
 			}
 		case 6: // ClientCutText (1+3 padding... eig. 3 padding + 4 len + len)
 			b := make([]byte, 7)

@@ -40,9 +40,9 @@ func TestRFBServeHandshakeAndFrame(t *testing.T) {
 	if sec[0] != 1 || sec[1] != 1 {
 		t.Fatalf("security: %v", sec)
 	}
-	cli.Write([]byte{1})    // gewählter Typ
-	readN(4)                // SecurityResult
-	cli.Write([]byte{1})    // ClientInit shared
+	cli.Write([]byte{1}) // gewählter Typ
+	readN(4)             // SecurityResult
+	cli.Write([]byte{1}) // ClientInit shared
 	// ServerInit
 	w := int(binary.BigEndian.Uint16(readN(2)))
 	h := int(binary.BigEndian.Uint16(readN(2)))
