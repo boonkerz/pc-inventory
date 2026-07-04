@@ -84,9 +84,8 @@ func rfbServe(ctx context.Context, conn io.ReadWriter, src screenSource, log *sl
 	}
 
 	var lastFrame time.Time
-	var prev []byte    // letztes gesendetes Vollbild (für Dirty-Rectangle-Diff)
-	tight := false     // Client unterstützt Tight-Encoding (7)?
-	quality := 85      // JPEG-Qualität (Stufe 2 macht das adaptiv)
+	tight := false // Client unterstützt Tight-Encoding (7)?
+	fctx := &frameCtx{}
 	hdr := make([]byte, 1)
 	for {
 		if ctx.Err() != nil {
@@ -120,16 +119,14 @@ func rfbServe(ctx context.Context, conn io.ReadWriter, src screenSource, log *sl
 			if _, err := io.ReadFull(conn, req); err != nil {
 				return err
 			}
-			// grobe Ratenbegrenzung (~15 fps), damit wir nicht durchdrehen
-			if d := time.Since(lastFrame); d < 66*time.Millisecond {
-				time.Sleep(66*time.Millisecond - d)
+			// Ratenbegrenzung (~30 fps), damit wir nicht durchdrehen
+			if d := time.Since(lastFrame); d < 33*time.Millisecond {
+				time.Sleep(33*time.Millisecond - d)
 			}
 			lastFrame = time.Now()
-			np, err := sendFrame(conn, src, prev, w, h, req[0] != 0, tight, quality)
-			if err != nil {
+			if err := fctx.send(conn, src, w, h, req[0] != 0, tight); err != nil {
 				return err
 			}
-			prev = np
 		case 4: // KeyEvent: down-flag(1) + padding(2) + keysym(4)
 			b := make([]byte, 7)
 			if _, err := io.ReadFull(conn, b); err != nil {
@@ -164,60 +161,97 @@ func rfbServe(ctx context.Context, conn io.ReadWriter, src screenSource, log *sl
 // gesendet (klein = Text/Cursor → Raw/verlustfrei; groß = Bewegung/Foto → JPEG).
 const jpegMinArea = 96 * 96
 
-// sendFrame überträgt bei incremental nur den geänderten Bereich (Dirty-Rectangle),
-// sonst das Vollbild. Kleine Bereiche als Raw (verlustfrei), große als Tight-JPEG
-// (falls der Client Tight kann). Liefert das aktualisierte „prev"-Vollbild zurück.
-func sendFrame(conn io.Writer, src screenSource, prev []byte, w, h int, incremental, tight bool, quality int) ([]byte, error) {
+// frameCtx hält den Zustand über Frames hinweg: letztes Vollbild (für Diff),
+// zuletzt verlustbehaftet (JPEG) gesendeter Bereich und Zeitpunkt der letzten
+// Änderung – für adaptive Qualität und den Nachschärf-Refresh im Leerlauf.
+type frameCtx struct {
+	prev               []byte
+	hasLossy           bool
+	lx0, ly0, lx1, ly1 int
+	lastChange         time.Time
+}
+
+// send überträgt einen Update: geänderten Bereich (Dirty-Rect) als Raw (klein) oder
+// Tight-JPEG (groß, adaptive Qualität). Ohne Änderung ggf. verlustfreier Refresh
+// des zuletzt als JPEG gesendeten Bereichs (Text wird nach Bewegung wieder scharf).
+func (st *frameCtx) send(conn io.Writer, src screenSource, w, h int, incremental, tight bool) error {
 	cur, err := src.Capture()
 	if err != nil || len(cur) < w*h*4 {
-		_, werr := conn.Write([]byte{0, 0, 0, 0}) // leeres Update
-		return prev, werr
+		_, werr := conn.Write([]byte{0, 0, 0, 0})
+		return werr
 	}
 	cur = cur[:w*h*4]
 
 	x0, y0, x1, y1 := 0, 0, w-1, h-1
-	if incremental && prev != nil {
-		x0, y0, x1, y1 = diffRect(prev, cur, w, h)
+	if incremental && st.prev != nil {
+		x0, y0, x1, y1 = diffRect(st.prev, cur, w, h)
 		if x1 < x0 { // keine Änderung
+			// Leerlauf: den zuletzt lossy (JPEG) gesendeten Bereich verlustfrei
+			// nachschärfen, wenn seit der letzten Änderung genug Zeit verging.
+			if st.hasLossy && time.Since(st.lastChange) > 250*time.Millisecond {
+				st.hasLossy = false
+				st.writeRect(conn, cur, st.lx0, st.ly0, st.lx1, st.ly1, w, false, 0)
+				st.store(cur)
+				return nil
+			}
 			_, werr := conn.Write([]byte{0, 0, 0, 0})
-			return prev, werr
+			return werr
 		}
 	}
+	st.lastChange = time.Now()
 	rw, rh := x1-x0+1, y1-y0+1
 
 	useJPEG := tight && rw*rh >= jpegMinArea
+	quality := 85
+	if useJPEG { // bei viel Bewegung Qualität senken -> flüssiger
+		frac := rw * rh
+		switch {
+		case frac > w*h/2:
+			quality = 45
+		case frac > w*h/6:
+			quality = 65
+		}
+	}
+	if err := st.writeRect(conn, cur, x0, y0, x1, y1, w, useJPEG, quality); err != nil {
+		return err
+	}
+	st.hasLossy = useJPEG
+	if useJPEG {
+		st.lx0, st.ly0, st.lx1, st.ly1 = x0, y0, x1, y1
+	}
+	st.store(cur)
+	return nil
+}
+
+func (st *frameCtx) store(cur []byte) {
+	if len(st.prev) != len(cur) {
+		st.prev = make([]byte, len(cur))
+	}
+	copy(st.prev, cur)
+}
+
+// writeRect schreibt ein FramebufferUpdate mit einem Rechteck (Raw oder Tight-JPEG).
+func (st *frameCtx) writeRect(conn io.Writer, cur []byte, x0, y0, x1, y1, w int, useJPEG bool, quality int) error {
+	rw, rh := x1-x0+1, y1-y0+1
 	enc := 0
 	if useJPEG {
-		enc = 7 // Tight
+		enc = 7
 	}
 	hdr := make([]byte, 0, 16)
-	hdr = append(hdr, 0, 0) // FramebufferUpdate, padding
-	hdr = be16(hdr, 1)      // 1 Rechteck
+	hdr = append(hdr, 0, 0)
+	hdr = be16(hdr, 1)
 	hdr = be16(hdr, x0)
 	hdr = be16(hdr, y0)
 	hdr = be16(hdr, rw)
 	hdr = be16(hdr, rh)
 	hdr = be32(hdr, enc)
 	if _, err := conn.Write(hdr); err != nil {
-		return prev, err
+		return err
 	}
-
 	if useJPEG {
-		if err := writeTightJPEG(conn, cur, x0, y0, rw, rh, w, quality); err != nil {
-			return prev, err
-		}
-	} else {
-		if err := writeRawRect(conn, cur, x0, y0, x1, y1, w); err != nil {
-			return prev, err
-		}
+		return writeTightJPEG(conn, cur, x0, y0, rw, rh, w, quality)
 	}
-
-	// prev auf das aktuelle Vollbild aktualisieren.
-	if len(prev) != len(cur) {
-		prev = make([]byte, len(cur))
-	}
-	copy(prev, cur)
-	return prev, nil
+	return writeRawRect(conn, cur, x0, y0, x1, y1, w)
 }
 
 // writeRawRect schreibt die Pixel eines Teilrechtecks (BGRX) zeilenweise; Chunks
