@@ -2,6 +2,7 @@ package remote
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"os"
 	"os/exec"
@@ -63,14 +64,7 @@ func wellKnownVNCPaths(exe string) []string {
 // nativen VNC-Server (loopback), verbindet sich per WebSocket mit dem Server und
 // relayed die rohen RFB-Bytes bidirektional zwischen WS und lokalem VNC-Server.
 // Der VNC-Server läuft nur während der Sitzung und wird danach beendet.
-func handleVNC(ctx context.Context, client *transport.Client, agentToken, session, password string, consent bool, log *slog.Logger) {
-	addr, stop, err := startVNCServer(ctx, client, agentToken, password, consent, log)
-	if err != nil {
-		log.Warn("vnc-server start fehlgeschlagen", "err", err)
-		return
-	}
-	defer stop()
-
+func handleVNC(ctx context.Context, client *transport.Client, agentToken, session, _ string, _ bool, log *slog.Logger) {
 	conn, err := client.DialTerminal(ctx, agentToken, session)
 	if err != nil {
 		log.Warn("vnc-websocket fehlgeschlagen", "err", err)
@@ -78,14 +72,20 @@ func handleVNC(ctx context.Context, client *transport.Client, agentToken, sessio
 	}
 	defer conn.CloseNow()
 
-	tcp, err := dialVNC(ctx, addr)
+	src, err := newScreenSource(log)
 	if err != nil {
-		log.Warn("verbindung zum vnc-server fehlgeschlagen", "addr", addr, "err", err)
+		log.Warn("bildschirmaufnahme nicht verfügbar", "err", err)
+		conn.Close(websocket.StatusInternalError, "keine aufnahme")
 		return
 	}
-	defer tcp.Close()
+	defer src.Close()
 
-	relayWSTCP(ctx, conn, tcp)
+	w, h := src.Bounds()
+	log.Info("fernsteuerung: rfb-server startet", "size", fmt.Sprintf("%dx%d", w, h))
+	nc := websocket.NetConn(ctx, conn, websocket.MessageBinary)
+	if err := rfbServe(ctx, nc, src, log); err != nil && ctx.Err() == nil {
+		log.Debug("rfb-server beendet", "err", err)
+	}
 	conn.Close(websocket.StatusNormalClosure, "ende")
 	log.Info("fernsteuerung beendet", "session", session)
 }
