@@ -1,8 +1,10 @@
 package remote
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
+	"image/jpeg"
 	"io"
 	"log/slog"
 	"net"
@@ -81,3 +83,69 @@ func TestRFBServeHandshakeAndFrame(t *testing.T) {
 		t.Fatalf("pixel: %v", err)
 	}
 }
+
+// TestRFBTightJPEG prüft, dass ein großer Bereich als gültiges Tight-JPEG
+// gesendet wird (Format + dekodierbares JPEG), wenn der Client Tight anbietet.
+func TestRFBTightJPEG(t *testing.T) {
+	srv, cli := net.Pipe()
+	defer cli.Close()
+	go func() { _ = rfbServe(context.Background(), srv, newSyntheticSource(), slog.Default()); srv.Close() }()
+
+	_ = cli.SetDeadline(time.Now().Add(5 * time.Second))
+	rd := func(n int) []byte { b := make([]byte, n); io.ReadFull(cli, b); return b }
+	rd(12)
+	cli.Write([]byte("RFB 003.008\n"))
+	rd(2)
+	cli.Write([]byte{1})
+	rd(4)
+	cli.Write([]byte{1})
+	w := int(binary.BigEndian.Uint16(rd(2)))
+	h := int(binary.BigEndian.Uint16(rd(2)))
+	rd(16)
+	rd(int(binary.BigEndian.Uint32(rd(4))))
+
+	// SetEncodings: Tight(7) + Raw(0)
+	se := []byte{2, 0}
+	se = binary.BigEndian.AppendUint16(se, 2)
+	se = binary.BigEndian.AppendUint32(se, 7)
+	se = binary.BigEndian.AppendUint32(se, 0)
+	cli.Write(se)
+
+	// Voll-Update anfordern (nicht-incremental).
+	req := []byte{3, 0, 0, 0, 0, 0}
+	req = binary.BigEndian.AppendUint16(req, uint16(w))
+	req = binary.BigEndian.AppendUint16(req, uint16(h))
+	cli.Write(req)
+
+	if upd := rd(4); upd[0] != 0 || binary.BigEndian.Uint16(upd[2:]) != 1 {
+		t.Fatalf("kein Update: %v", upd)
+	}
+	rect := rd(12)
+	if enc := binary.BigEndian.Uint32(rect[8:]); enc != 7 {
+		t.Fatalf("erwartete Tight(7), bekam %d", enc)
+	}
+	if ctrl := rd(1); ctrl[0] != 0x90 {
+		t.Fatalf("erwartete JPEG-Control 0x90, bekam 0x%x", ctrl[0])
+	}
+	// kompakte Länge lesen
+	n := 0
+	shift := 0
+	for {
+		b := rd(1)[0]
+		n |= int(b&0x7f) << shift
+		if b&0x80 == 0 {
+			break
+		}
+		shift += 7
+	}
+	jpg := rd(n)
+	img, err := jpeg.Decode(bytesReader(jpg))
+	if err != nil {
+		t.Fatalf("JPEG dekodieren: %v", err)
+	}
+	if img.Bounds().Dx() != w || img.Bounds().Dy() != h {
+		t.Fatalf("JPEG-Größe %v, erwartet %dx%d", img.Bounds(), w, h)
+	}
+}
+
+func bytesReader(b []byte) *bytes.Reader { return bytes.NewReader(b) }
