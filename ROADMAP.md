@@ -15,9 +15,10 @@ nächste Features – noch nichts davon ist gebaut.
 - [x] **Metrik-Historie + Verlaufsgraphen** – leichtes CPU/RAM/Disk-Sample je Checkin
   (`metrics_samples`), gebucketete Historie und SVG-Verlaufschart im Auslastung-Tab
   (24 h / 7 d / 30 d). Aufbewahrung 90 Tage.
-- [ ] **Software-Verteilung** – Pakete/Installer gezielt ausrollen (Windows winget/choco,
-  Linux apt/dnf): „installiere Firefox auf allen Geräten dieses Standorts". Ergänzt
-  Patch-Management um Drittsoftware.
+- [x] **Software-Verteilung** – Paketkatalog (`software_packages`, Kennung je Manager
+  winget/choco/apt/dnf/brew), Verwaltung unter Einstellungen; Sammelaktion „Software
+  installieren" rollt auf Gerät/Client/Standort/Tag aus. Der Agent wählt den verfügbaren
+  Paketmanager. Ergänzt Patch-Management um Drittsoftware.
 
 ### Fernzugriff
 
