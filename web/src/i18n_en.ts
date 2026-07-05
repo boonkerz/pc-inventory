@@ -515,4 +515,6 @@ export const EN: Record<string, string> = {
   "Datei per Drag&Drop auf den Bildschirm ziehen, um sie zum Gerät zu übertragen.": "Drag & drop a file onto the screen to transfer it to the device.",
   "Die Fernsteuerung öffnet sich in einem eigenen, großen Fenster.": "The remote session opens in its own large window.",
   "Fernsteuerung öffnen": "Open remote control",
+  "Zu den Checks springen": "Jump to checks",
+  "Zu den Tasks springen": "Jump to tasks",
 };

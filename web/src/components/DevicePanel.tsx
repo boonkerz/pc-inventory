@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
@@ -30,7 +30,7 @@ function fmtSize(n: number): string {
 
 // DevicePanel zeigt die Details eines Geräts mit Tabs – einsetzbar im unteren Panel
 // der Geräteliste und als eigene Seite.
-export function DevicePanel({ id }: { id: string }) {
+export function DevicePanel({ id, focusTab, focusKey }: { id: string; focusTab?: string; focusKey?: number }) {
   const qc = useQueryClient();
   const nav = useNavigate();
   const { user } = useAuth();
@@ -38,6 +38,10 @@ export function DevicePanel({ id }: { id: string }) {
   const isAdmin = user?.role === "admin";
   const canOperate = user?.role === "admin" || user?.role === "technician";
   const [tab, setTab] = useState<Tab>("summary");
+  // Direktsprung in einen Tab (z.B. Klick auf Checks/Tasks in der Geräteliste).
+  useEffect(() => {
+    if (focusTab) setTab(focusTab as Tab);
+  }, [focusKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const [swFilter, setSwFilter] = useState("");
   const [runScriptId, setRunScriptId] = useState("");
   const [aptMode, setAptMode] = useState<"full" | "safe">("full");

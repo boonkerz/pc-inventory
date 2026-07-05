@@ -70,6 +70,8 @@ export function Devices() {
     if (selectedId) sessionStorage.setItem("pcinv-selected", selectedId);
     else sessionStorage.removeItem("pcinv-selected");
   }, [selectedId]);
+  // Direktsprung in einen Panel-Tab (z.B. Klick auf Checks/Tasks in der Liste).
+  const [jump, setJump] = useState<{ tab: string; n: number }>({ tab: "", n: 0 });
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
 
@@ -150,8 +152,14 @@ export function Devices() {
                       <td className="mono"><CopyText value={primaryIPv4(d)} /></td>
                       <td className="muted">{d.cpu_cores ? t("{n} Kerne", { n: d.cpu_cores }) : "—"}</td>
                       <td className="muted">{formatBytes(d.memory_bytes)}</td>
-                      <td><HealthBadge total={d.checks_total} failing={d.checks_failing} /></td>
-                      <td><TaskHealthBadge total={d.tasks_total} failing={d.tasks_failing} /></td>
+                      <td style={{ cursor: "pointer" }} title={t("Zu den Checks springen")}
+                        onClick={(e) => { e.stopPropagation(); setSelectedId(d.id); setJump({ tab: "checks", n: jump.n + 1 }); }}>
+                        <HealthBadge total={d.checks_total} failing={d.checks_failing} />
+                      </td>
+                      <td style={{ cursor: "pointer" }} title={t("Zu den Tasks springen")}
+                        onClick={(e) => { e.stopPropagation(); setSelectedId(d.id); setJump({ tab: "tasks", n: jump.n + 1 }); }}>
+                        <TaskHealthBadge total={d.tasks_total} failing={d.tasks_failing} />
+                      </td>
                       <td><UpdatesBadge count={d.updates_count} /></td>
                       <td className="muted mono">{d.agent_version || "—"}</td>
                       <td className="muted">{relTime(d.last_seen)}</td>
@@ -166,7 +174,7 @@ export function Devices() {
 
             {selectedId && data.some((d) => d.id === selectedId) ? (
               <div className="devices-detail-wrap">
-                <DevicePanel id={selectedId} />
+                <DevicePanel id={selectedId} focusTab={jump.tab} focusKey={jump.n} />
               </div>
             ) : (
               <div className="devices-detail-wrap empty-panel muted">{t("Gerät auswählen, um Details zu sehen.")}</div>
