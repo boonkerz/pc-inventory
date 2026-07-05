@@ -30,14 +30,17 @@ export function MetricsHistory({ deviceId }: { deviceId: string }) {
   const fmt = (ms: number) => new Date(ms).toLocaleString([], range === "24h"
     ? { hour: "2-digit", minute: "2-digit" }
     : { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+  const yPct = (v: number) => ((PAD + (1 - v / 100) * (H - 2 * PAD)) / H) * 100;
+  const last = points[points.length - 1];
+  const val = (v?: number) => (v == null ? "–" : `${Math.round(v)} %`);
 
   return (
     <div className="metrics-history">
       <div className="inline-form" style={{ justifyContent: "space-between", alignItems: "center" }}>
         <div className="chart-legend">
-          <span className="lg cpu">CPU</span>
-          <span className="lg mem">RAM</span>
-          <span className="lg disk">Disk</span>
+          <span className="lg cpu">CPU {val(last?.cpu)}</span>
+          <span className="lg mem">RAM {val(last?.mem)}</span>
+          <span className="lg disk">Disk {val(last?.disk)}</span>
         </div>
         <select value={range} onChange={(e) => setRange(e.target.value as "24h" | "7d" | "30d")}>
           <option value="24h">{t("24 Stunden")}</option>
@@ -49,15 +52,22 @@ export function MetricsHistory({ deviceId }: { deviceId: string }) {
         <p className="muted small">{t("Noch keine Verlaufsdaten (werden je Checkin gesammelt).")}</p>
       ) : (
         <>
-          <svg viewBox={`0 0 ${W} ${H}`} className="chart" preserveAspectRatio="none">
-            {[25, 50, 75].map((g) => {
-              const y = PAD + (1 - g / 100) * (H - 2 * PAD);
-              return <line key={g} x1={PAD} y1={y} x2={W - PAD} y2={y} className="grid" />;
-            })}
-            <path d={path("disk")} className="line disk" />
-            <path d={path("mem")} className="line mem" />
-            <path d={path("cpu")} className="line cpu" />
-          </svg>
+          <div className="chart-area">
+            <div className="chart-yaxis">
+              {[100, 75, 50, 25, 0].map((v) => (
+                <span key={v} style={{ top: `${yPct(v)}%` }}>{v} %</span>
+              ))}
+            </div>
+            <svg viewBox={`0 0 ${W} ${H}`} className="chart" preserveAspectRatio="none">
+              {[25, 50, 75].map((g) => {
+                const y = PAD + (1 - g / 100) * (H - 2 * PAD);
+                return <line key={g} x1={PAD} y1={y} x2={W - PAD} y2={y} className="grid" />;
+              })}
+              <path d={path("disk")} className="line disk" />
+              <path d={path("mem")} className="line mem" />
+              <path d={path("cpu")} className="line cpu" />
+            </svg>
+          </div>
           <div className="chart-x muted small">
             <span>{fmt(points[0].ts)}</span>
             <span>{fmt(points[points.length - 1].ts)}</span>
