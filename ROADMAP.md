@@ -28,7 +28,9 @@ nächste Features – noch nichts davon ist gebaut.
 
 ### Sicherheit & Compliance
 
-- [ ] **Schwachstellen-Abgleich** – installierte Softwareversionen gegen CVE-Feeds prüfen.
+- [x] **Schwachstellen-Abgleich** – installierte Software wird gegen OSV.dev (CVE) geprüft
+  (`internal/server/cve`, Ergebnisse in `vulnerabilities`); Tab „Schwachstellen“ je Gerät
+  + Flotten-Übersicht. Beste Abdeckung bei Linux-Paketen, Windows/macOS best effort.
 - [ ] **Compliance-/Baseline-Checks** (CIS-artig), Firewall-Status, offene Ports,
   lokale Admin-Konten auditieren.
 
@@ -40,7 +42,9 @@ nächste Features – noch nichts davon ist gebaut.
 
 ### Organisation & Daten
 
-- [ ] **Smart Groups** – dynamische Gruppen per Regel (z. B. „OS = Windows & Check fehlerhaft").
+- [x] **Smart Groups** – Gruppen mit optionaler JSON-Regel (`smartWhere`); Mitglieder werden
+  dynamisch aufgelöst (Felder os/os_version/hostname/agent_version/status/updates_count u.a.,
+  UND/ODER). Nutzbar als Bulk-Ziel mit Live-Zähler; Regel-Editor auf der Tags-Seite.
 - [ ] **CSV/Excel-Export** von Geräte-/Software-/Audit-Listen.
 - [ ] **Asset-Verwaltung** – Kaufdatum, Garantie, Kosten, Standort (dedizierte Felder).
 - [ ] **Hardware-Änderungs-Tracking** (analog zum Software-Tracking).
