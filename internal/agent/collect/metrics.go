@@ -11,6 +11,8 @@ import (
 	"github.com/shirou/gopsutil/v4/load"
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/shirou/gopsutil/v4/net"
+
+	"github.com/thomaspeterson/pc-inventory/internal/shared"
 )
 
 // Metrics ist eine Momentaufnahme der Systemauslastung.
@@ -40,6 +42,31 @@ type NetIO struct {
 	Name      string `json:"name"`
 	BytesSent uint64 `json:"bytes_sent"`
 	BytesRecv uint64 `json:"bytes_recv"`
+}
+
+// Sample liefert eine leichte Auslastungs-Momentaufnahme (CPU/RAM/Disk in %) für
+// die Verlaufshistorie. Die CPU-Messung blockiert kurz (ein Messintervall).
+func Sample(ctx context.Context) *shared.MetricsSample {
+	s := &shared.MetricsSample{}
+	if pct, err := cpu.PercentWithContext(ctx, 300*time.Millisecond, false); err == nil && len(pct) > 0 {
+		s.CPU = pct[0]
+	}
+	if vm, err := mem.VirtualMemoryWithContext(ctx); err == nil {
+		s.Mem = vm.UsedPercent
+	}
+	if parts, err := disk.PartitionsWithContext(ctx, false); err == nil {
+		seen := map[string]bool{}
+		for _, p := range parts {
+			if !realFSTypes[strings.ToLower(p.Fstype)] || seen[p.Device] {
+				continue
+			}
+			seen[p.Device] = true
+			if u, err := disk.UsageWithContext(ctx, p.Mountpoint); err == nil && u.Total > 0 && u.UsedPercent > s.Disk {
+				s.Disk = u.UsedPercent
+			}
+		}
+	}
+	return s
 }
 
 // MetricsJSON sammelt eine Momentaufnahme und liefert sie als JSON. Die CPU-Messung

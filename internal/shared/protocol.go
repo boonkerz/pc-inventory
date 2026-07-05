@@ -28,6 +28,15 @@ type CheckinRequest struct {
 	CheckResults   []CheckResult   `json:"check_results,omitempty"`
 	TaskResults    []TaskResult    `json:"task_results,omitempty"`
 	CommandResults []CommandResult `json:"command_results,omitempty"`
+	Sample         *MetricsSample  `json:"sample,omitempty"` // leichte Momentaufnahme für die Historie
+}
+
+// MetricsSample ist eine leichte Auslastungs-Momentaufnahme je Checkin (für die
+// Verlaufscharts). Prozentwerte 0..100.
+type MetricsSample struct {
+	CPU  float64 `json:"cpu"`
+	Mem  float64 `json:"mem"`
+	Disk float64 `json:"disk"` // am stärksten belegter Datenträger
 }
 
 // CommandResult ist das Ergebnis eines Ad-hoc-Befehls.

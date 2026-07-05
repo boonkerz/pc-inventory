@@ -519,4 +519,8 @@ export const EN: Record<string, string> = {
   "Zu den Tasks springen": "Jump to tasks",
   "Updates durchführen": "Install updates",
   "Updates auf allen Geräten des Ziels installieren? Das kann Neustarts auslösen.": "Install updates on all devices of the target? This may trigger reboots.",
+  "24 Stunden": "24 hours",
+  "7 Tage": "7 days",
+  "30 Tage": "30 days",
+  "Noch keine Verlaufsdaten (werden je Checkin gesammelt).": "No history yet (collected on each check-in).",
 };

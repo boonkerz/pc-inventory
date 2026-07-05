@@ -106,6 +106,7 @@ func (s *Server) routes() http.Handler {
 					r.Get("/devices/{id}/history", s.handleDeviceHistory)
 					r.Get("/devices/{id}/events", s.handleDeviceEvents)
 					r.Get("/devices/{id}/remote-consent", s.handleGetDeviceConsent)
+					r.Get("/devices/{id}/metrics-history", s.handleMetricsHistory)
 					r.Get("/devices/{id}/task-runs", s.handleDeviceTaskRuns)
 					r.Get("/devices/{id}/software-events", s.handleDeviceSoftwareEvents)
 					r.Post("/devices/{id}/scan-dir", s.handleScanDir)

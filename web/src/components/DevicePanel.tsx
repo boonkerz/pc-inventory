@@ -14,6 +14,7 @@ import { SecurityPanel } from "./SecurityPanel";
 import { EventLog } from "./EventLog";
 import { CopyText } from "./CopyText";
 import { LiveMetrics } from "./LiveMetrics";
+import { MetricsHistory } from "./MetricsHistory";
 import { useAuth } from "../auth";
 import { useI18n } from "../i18n";
 
@@ -431,7 +432,13 @@ export function DevicePanel({ id, focusTab, focusKey }: { id: string; focusTab?:
         )}
 
         {tab === "live" && (
-          <LiveMetrics deviceId={id} />
+          <>
+            <LiveMetrics deviceId={id} />
+            <section className="card">
+              <h3 style={{ marginTop: 0 }}>{t("Verlauf")}</h3>
+              <MetricsHistory deviceId={id} />
+            </section>
+          </>
         )}
 
         {tab === "security" && (

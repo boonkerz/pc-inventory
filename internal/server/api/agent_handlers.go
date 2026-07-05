@@ -70,6 +70,9 @@ func (s *Server) handleCheckin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.alertSoftwareChanges(r.Context(), device, before)
+	if req.Sample != nil {
+		_ = s.store.InsertMetricsSample(r.Context(), device.ID, time.Now().UnixMilli(), req.Sample.CPU, req.Sample.Mem, req.Sample.Disk)
+	}
 	if len(req.CheckResults) > 0 {
 		events, err := s.store.SaveCheckResults(r.Context(), device.ID, req.CheckResults)
 		if err != nil {

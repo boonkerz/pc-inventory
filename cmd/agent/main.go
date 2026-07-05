@@ -241,6 +241,7 @@ func (p *program) checkin(ctx context.Context, client *transport.Client, state a
 
 	resp, err := client.Checkin(ctx, state.AgentToken, shared.CheckinRequest{
 		Inventory: inv, CheckResults: checks, TaskResults: tasks, CommandResults: cmds,
+		Sample: collect.Sample(ctx),
 	})
 	if err != nil {
 		p.log.Warn("checkin fehlgeschlagen", "err", err)

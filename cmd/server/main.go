@@ -149,6 +149,8 @@ func (p *program) pruneLoop(retention time.Duration) {
 		if tasks > 0 || cmds > 0 {
 			p.log.Info("historie aufgeräumt", "task_läufe", tasks, "befehle", cmds, "älter_als", retention)
 		}
+		// Auslastungs-Historie 90 Tage aufbewahren (unabhängig von der Task-Retention).
+		_ = p.st.PruneMetrics(ctx, 90*24*time.Hour)
 	}
 	prune()
 	t := time.NewTicker(6 * time.Hour)

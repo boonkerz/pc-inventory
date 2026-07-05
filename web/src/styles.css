@@ -377,3 +377,17 @@ label input, label select { color: var(--text); }
 .remote-fill .remote-screen, .remote-popout .remote-screen { flex: 1; min-height: 0; border-radius: 0; }
 
 .code-block pre.one-liner { white-space: pre-wrap; word-break: break-all; }
+
+/* Metrik-Verlaufschart */
+.metrics-history .chart { width: 100%; height: 150px; background: #0b0e14; border-radius: 8px; }
+.metrics-history .chart .grid { stroke: #ffffff18; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.metrics-history .chart .line { fill: none; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.metrics-history .chart .line.cpu { stroke: #4ade80; }
+.metrics-history .chart .line.mem { stroke: #60a5fa; }
+.metrics-history .chart .line.disk { stroke: #fbbf24; }
+.metrics-history .chart-x { display: flex; justify-content: space-between; margin-top: 2px; }
+.chart-legend { display: flex; gap: 12px; }
+.chart-legend .lg::before { content: ""; display: inline-block; width: 10px; height: 3px; margin-right: 4px; vertical-align: middle; border-radius: 2px; }
+.chart-legend .lg.cpu::before { background: #4ade80; }
+.chart-legend .lg.mem::before { background: #60a5fa; }
+.chart-legend .lg.disk::before { background: #fbbf24; }
