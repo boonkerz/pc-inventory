@@ -510,4 +510,7 @@ export const EN: Record<string, string> = {
   "Alle Monitore": "All monitors",
   "Monitor 2": "Monitor 2",
   "Monitor 3": "Monitor 3",
+  "Übertrage {name}…": "Transferring {name}…",
+  "Übertragung fehlgeschlagen": "Transfer failed",
+  "Datei per Drag&Drop auf den Bildschirm ziehen, um sie zum Gerät zu übertragen.": "Drag & drop a file onto the screen to transfer it to the device.",
 };

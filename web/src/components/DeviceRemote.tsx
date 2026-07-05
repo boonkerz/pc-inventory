@@ -3,6 +3,17 @@ import RFB from "@novnc/novnc";
 import { useI18n } from "../i18n";
 import { api } from "../api";
 import { useAuth } from "../auth";
+import type { Command } from "../types";
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+async function pollCmd(id: string): Promise<Command> {
+  for (let i = 0; i < 90; i++) {
+    await sleep(700);
+    const cmd = await api.get<Command>(`/commands/${id}`);
+    if (cmd.status === "done") return cmd;
+  }
+  throw new Error("timeout");
+}
 
 // DeviceRemote öffnet eine Web-Fernsteuerung (Remote Desktop) über noVNC. Der Server
 // startet on-demand einen VNC-Server am Gerät und tunnelt die RFB-Bytes über eine
@@ -31,6 +42,27 @@ export function DeviceRemote({ id, os, fill, autoStart }: {
     await api.put(`/remote-consent`, { target_type: "device", target_id: id, mode });
     const c = await api.get<{ effective: string; device: string }>(`/devices/${id}/remote-consent`);
     setConsent(c);
+  };
+
+  // Datei per Drag&Drop auf den Bildschirm zum Gerät übertragen (öffentlicher Desktop).
+  const [dropStatus, setDropStatus] = useState("");
+  const uploadDropped = async (file: File) => {
+    const target = /win/i.test(os) ? `C:\\Users\\Public\\Desktop\\${file.name}` : `/tmp/${file.name}`;
+    setDropStatus(t("Übertrage {name}…", { name: file.name }));
+    try {
+      const res = await fetch(`/api/v1/devices/${id}/write-file?path=${encodeURIComponent(target)}`,
+        { method: "POST", credentials: "include", body: file });
+      if (!res.ok) throw new Error();
+      const { command_id } = await res.json();
+      const cmd = await pollCmd(command_id);
+      if (cmd.exit_code !== 0) throw new Error();
+      setDropStatus(`✓ ${file.name} → ${target}`);
+    } catch { setDropStatus(t("Übertragung fehlgeschlagen")); }
+  };
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const f = e.dataTransfer.files?.[0];
+    if (f) void uploadDropped(f);
   };
 
   const popout = () => {
@@ -109,7 +141,8 @@ export function DeviceRemote({ id, os, fill, autoStart }: {
         {!connected && <button className="btn primary sm" onClick={() => setSession((n) => n + 1)}>{t("Verbinden")}</button>}
         {!fill && <button className="btn ghost sm" title={t("In eigenem Fenster öffnen")} onClick={popout}>⧉</button>}
       </div>
-      <div ref={hostRef} className="remote-screen" />
+      <div ref={hostRef} className="remote-screen" onDragOver={(e) => e.preventDefault()} onDrop={onDrop} />
+      {dropStatus && <p className="muted small">📁 {dropStatus}</p>}
       {consent && (
         <p className="muted small">
           {t("Zustimmung")}:{" "}
@@ -121,7 +154,7 @@ export function DeviceRemote({ id, os, fill, autoStart }: {
           {t("— nachfragen verlangt eine Bestätigung am Gerät (für Nutzer-PCs), unbeaufsichtigt für Server.")}
         </p>
       )}
-      <p className="muted small">{t("Startet on-demand einen VNC-Server am Gerät (nur während der Sitzung, nur lokal). Bei Nutzer-PCs muss die Verbindung ggf. am Gerät bestätigt werden.")}</p>
+      <p className="muted small">{t("Startet on-demand einen VNC-Server am Gerät (nur während der Sitzung, nur lokal). Bei Nutzer-PCs muss die Verbindung ggf. am Gerät bestätigt werden.")} {t("Datei per Drag&Drop auf den Bildschirm ziehen, um sie zum Gerät zu übertragen.")}</p>
     </div>
   );
 }
