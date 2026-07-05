@@ -8,6 +8,7 @@ export function RemotePopout() {
   const { id } = useParams<{ id: string }>();
   const [params] = useSearchParams();
   const os = params.get("os") || "";
+  const monitor = Number(params.get("monitor")) || 1;
 
   useEffect(() => {
     const prev = document.title;
@@ -18,7 +19,7 @@ export function RemotePopout() {
   if (!id) return null;
   return (
     <div className="remote-popout">
-      <DeviceRemote id={id} os={os} fill autoStart />
+      <DeviceRemote id={id} os={os} fill autoStart initialMonitor={monitor} />
     </div>
   );
 }

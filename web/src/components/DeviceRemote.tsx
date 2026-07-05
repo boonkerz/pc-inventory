@@ -19,15 +19,15 @@ async function pollCmd(id: string): Promise<Command> {
 // startet on-demand einen VNC-Server am Gerät und tunnelt die RFB-Bytes über eine
 // WebSocket – gleiche Origin, daher Cookie-Auth. fill = füllt das Popout-Fenster;
 // autoStart = sofort verbinden (Popout).
-export function DeviceRemote({ id, os, fill, autoStart }: {
-  id: string; os: string; fill?: boolean; autoStart?: boolean;
+export function DeviceRemote({ id, os, fill, autoStart, initialMonitor }: {
+  id: string; os: string; fill?: boolean; autoStart?: boolean; initialMonitor?: number;
 }) {
   const { t } = useI18n();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [status, setStatus] = useState("");
   const [connected, setConnected] = useState(false);
-  const [monitor, setMonitor] = useState(1); // 1=primär, 0=alle, N=Monitor N
+  const [monitor, setMonitor] = useState(initialMonitor ?? 1); // 1=primär, 0=alle, N=Monitor N
   const [session, setSession] = useState(autoStart ? 1 : 0); // hochzählen = (neu) verbinden
   const hostRef = useRef<HTMLDivElement>(null);
   const rfbRef = useRef<any>(null);
@@ -66,8 +66,8 @@ export function DeviceRemote({ id, os, fill, autoStart }: {
   };
 
   const popout = () => {
-    window.open(`/devices/${id}/remote?os=${encodeURIComponent(os)}`, `remote-${id}`,
-      "width=1024,height=720,menubar=no,toolbar=no,location=no,status=no");
+    window.open(`/devices/${id}/remote?os=${encodeURIComponent(os)}&monitor=${monitor}`, `remote-${id}`,
+      "width=1280,height=800,menubar=no,toolbar=no,location=no,status=no");
   };
 
   useEffect(() => {
@@ -115,8 +115,42 @@ export function DeviceRemote({ id, os, fill, autoStart }: {
     };
   }, [session, id]);
 
+  const consentBox = consent && (
+    <p className="muted small">
+      {t("Zustimmung")}:{" "}
+      <select value={consent.device} onChange={(e) => setConsentMode(e.target.value)}>
+        <option value="">{t("Erben")} ({consent.effective === "prompt" ? t("nachfragen") : t("unbeaufsichtigt")})</option>
+        <option value="unattended">{t("unbeaufsichtigt")}</option>
+        <option value="prompt">{t("nachfragen")}</option>
+      </select>{" "}
+      {t("— nachfragen verlangt eine Bestätigung am Gerät (für Nutzer-PCs), unbeaufsichtigt für Server.")}
+    </p>
+  );
+
+  // Im Tab (nicht Popout): nur ein Starter – die Fernsteuerung läuft im eigenen Fenster.
+  if (!fill) {
+    return (
+      <div className="remote-panel">
+        <p className="muted">{t("Die Fernsteuerung öffnet sich in einem eigenen, großen Fenster.")}</p>
+        <div className="inline-form">
+          <label className="num">{t("Monitor")}
+            <select value={monitor} onChange={(e) => setMonitor(Number(e.target.value))}>
+              <option value={1}>{t("Primär")}</option>
+              <option value={0}>{t("Alle Monitore")}</option>
+              <option value={2}>{t("Monitor 2")}</option>
+              <option value={3}>{t("Monitor 3")}</option>
+            </select>
+          </label>
+          <button className="btn primary" onClick={popout}>⧉ {t("Fernsteuerung öffnen")}</button>
+        </div>
+        {consentBox}
+        <p className="muted small">{t("Startet on-demand einen VNC-Server am Gerät (nur während der Sitzung, nur lokal). Bei Nutzer-PCs muss die Verbindung ggf. am Gerät bestätigt werden.")} {t("Datei per Drag&Drop auf den Bildschirm ziehen, um sie zum Gerät zu übertragen.")}</p>
+      </div>
+    );
+  }
+
   return (
-    <div className={fill ? "remote-fill" : "remote-panel"}>
+    <div className="remote-fill">
       <div className="remote-bar">
         <span className={`badge ${connected ? "badge-online" : "badge-unknown"}`}>{status || t("getrennt")}</span>
         <div className="spacer" />
@@ -139,22 +173,9 @@ export function DeviceRemote({ id, os, fill, autoStart }: {
           </>
         )}
         {!connected && <button className="btn primary sm" onClick={() => setSession((n) => n + 1)}>{t("Verbinden")}</button>}
-        {!fill && <button className="btn ghost sm" title={t("In eigenem Fenster öffnen")} onClick={popout}>⧉</button>}
       </div>
       <div ref={hostRef} className="remote-screen" onDragOver={(e) => e.preventDefault()} onDrop={onDrop} />
       {dropStatus && <p className="muted small">📁 {dropStatus}</p>}
-      {consent && (
-        <p className="muted small">
-          {t("Zustimmung")}:{" "}
-          <select value={consent.device} onChange={(e) => setConsentMode(e.target.value)}>
-            <option value="">{t("Erben")} ({consent.effective === "prompt" ? t("nachfragen") : t("unbeaufsichtigt")})</option>
-            <option value="unattended">{t("unbeaufsichtigt")}</option>
-            <option value="prompt">{t("nachfragen")}</option>
-          </select>{" "}
-          {t("— nachfragen verlangt eine Bestätigung am Gerät (für Nutzer-PCs), unbeaufsichtigt für Server.")}
-        </p>
-      )}
-      <p className="muted small">{t("Startet on-demand einen VNC-Server am Gerät (nur während der Sitzung, nur lokal). Bei Nutzer-PCs muss die Verbindung ggf. am Gerät bestätigt werden.")} {t("Datei per Drag&Drop auf den Bildschirm ziehen, um sie zum Gerät zu übertragen.")}</p>
     </div>
   );
 }
