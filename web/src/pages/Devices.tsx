@@ -133,6 +133,7 @@ export function Devices() {
                     <th>RAM</th>
                     <th>{t("Checks")}</th>
                     <th>{t("Tasks")}</th>
+                    <th>{t("CVE")}</th>
                     <th>{t("Updates")}</th>
                     <th>{t("Agent")}</th>
                     <th>{t("Zuletzt gesehen")}</th>
@@ -160,13 +161,17 @@ export function Devices() {
                         onClick={(e) => { e.stopPropagation(); setSelectedId(d.id); setJump({ tab: "tasks", n: jump.n + 1 }); }}>
                         <TaskHealthBadge total={d.tasks_total} failing={d.tasks_failing} />
                       </td>
+                      <td style={{ cursor: "pointer" }} title={t("Zu den Schwachstellen springen")}
+                        onClick={(e) => { e.stopPropagation(); setSelectedId(d.id); setJump({ tab: "vulns", n: jump.n + 1 }); }}>
+                        {d.vuln_count ? <span className="badge badge-offline">{d.vuln_count}</span> : <span className="muted">—</span>}
+                      </td>
                       <td><UpdatesBadge count={d.updates_count} /></td>
                       <td className="muted mono">{d.agent_version || "—"}</td>
                       <td className="muted">{relTime(d.last_seen)}</td>
                     </tr>
                   ))}
                   {devices.length === 0 && (
-                    <tr><td colSpan={12} className="empty">{t("Keine Geräte gefunden.")}</td></tr>
+                    <tr><td colSpan={13} className="empty">{t("Keine Geräte gefunden.")}</td></tr>
                   )}
                 </tbody>
               </table>

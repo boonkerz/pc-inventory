@@ -554,4 +554,6 @@ export const EN: Record<string, string> = {
   "gesamt": "total",
   "Keine Schwachstellen erkannt (oder noch nicht gescannt).": "No vulnerabilities detected (or not scanned yet).",
   "Über OSV.dev erkannte Schwachstellen. Scan je Gerät im Tab „Schwachstellen“.": "Vulnerabilities detected via OSV.dev. Scan per device in the „Vulnerabilities“ tab.",
+  "CVE": "CVE",
+  "Zu den Schwachstellen springen": "Jump to vulnerabilities",
 };

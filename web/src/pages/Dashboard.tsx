@@ -59,6 +59,7 @@ export function Dashboard() {
         <Tile label={t("Checks fehlerhaft")} value={data.failing_checks} sub={t("{n} Gerät(e)", { n: data.devices_with_failing_checks })} tone={data.failing_checks > 0 ? "bad" : "ok"} onClick={() => nav("/devices")} />
         <Tile label={t("Tasks fehlerhaft")} value={data.failing_tasks} sub={t("{n} Gerät(e)", { n: data.devices_with_failing_tasks })} tone={data.failing_tasks > 0 ? "warn" : "ok"} onClick={() => nav("/devices")} />
         <Tile label={t("Ausstehende Patches")} value={data.pending_patches} sub={t("{n} Gerät(e)", { n: data.devices_with_pending_patches })} tone={data.pending_patches > 0 ? "warn" : "ok"} onClick={() => nav("/devices")} />
+        <Tile label={t("Schwachstellen")} value={data.vulnerabilities} sub={t("{n} Gerät(e)", { n: data.devices_with_vulns })} tone={data.vulnerabilities > 0 ? "bad" : "ok"} onClick={() => nav("/devices")} />
       </div>
 
       <div className="grid-2" style={{ marginTop: 18 }}>

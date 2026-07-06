@@ -92,6 +92,9 @@ type Device struct {
 	TasksTotal   int `json:"tasks_total"`
 	TasksFailing int `json:"tasks_failing"`
 
+	// Anzahl erkannter Schwachstellen (CVE/OSV) – für Badge in der Liste + Dashboard.
+	VulnCount int `json:"vuln_count"`
+
 	// Anzahl wirksamer Checks/Tasks laut zugewiesener Policy (für die Statusmeldung).
 	AssignedChecks int `json:"assigned_checks"`
 	AssignedTasks  int `json:"assigned_tasks"`
@@ -380,6 +383,8 @@ type DashboardSummary struct {
 	FailingTasks              int          `json:"failing_tasks"`
 	DevicesWithPendingPatches int          `json:"devices_with_pending_patches"`
 	PendingPatches            int          `json:"pending_patches"`
+	DevicesWithVulns          int          `json:"devices_with_vulns"`
+	Vulnerabilities           int          `json:"vulnerabilities"`
 	RecentEvents              []CheckEvent `json:"recent_events"`
 }
 

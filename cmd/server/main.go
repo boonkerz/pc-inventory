@@ -20,6 +20,7 @@ import (
 	"github.com/thomaspeterson/pc-inventory/internal/server/api"
 	"github.com/thomaspeterson/pc-inventory/internal/server/auth"
 	"github.com/thomaspeterson/pc-inventory/internal/server/config"
+	"github.com/thomaspeterson/pc-inventory/internal/server/cve"
 	"github.com/thomaspeterson/pc-inventory/internal/server/model"
 	"github.com/thomaspeterson/pc-inventory/internal/server/selfsign"
 	"github.com/thomaspeterson/pc-inventory/internal/server/store"
@@ -129,9 +130,62 @@ func (p *program) Start(s service.Service) error {
 		go p.pruneLoop(cfg.ResultRetention)
 	}
 	go srv.RunReportLoop(context.Background())
+	go p.cveScanLoop()
 
 	go p.serve(cfg)
 	return nil
+}
+
+// cveScanLoop gleicht täglich (und ~2 Min. nach dem Start) die installierte Software
+// aller Geräte gegen OSV.dev ab – schonend, sequenziell mit Pause je Gerät.
+func (p *program) cveScanLoop() {
+	ctx := context.Background()
+	client := &http.Client{Timeout: 20 * time.Second}
+	scan := func() {
+		devs, err := p.st.ListDevices(ctx)
+		if err != nil {
+			p.log.Warn("cve-scan: geräte laden fehlgeschlagen", "err", err)
+			return
+		}
+		scanned, found := 0, 0
+		for _, d := range devs {
+			if d.Revoked {
+				continue
+			}
+			sw, err := p.st.DeviceSoftware(ctx, d.ID)
+			if err != nil || len(sw) == 0 {
+				continue
+			}
+			in := make([]cve.SW, 0, len(sw))
+			for _, s := range sw {
+				in = append(in, cve.SW{Name: s.Name, Version: s.Version})
+			}
+			vulns, err := cve.Scan(ctx, client, in, cve.Ecosystem(d.OS, d.OSVersion))
+			if err != nil {
+				continue
+			}
+			mv := make([]model.Vulnerability, 0, len(vulns))
+			for _, v := range vulns {
+				mv = append(mv, model.Vulnerability{
+					Package: v.Package, Version: v.Version, VulnID: v.ID,
+					Severity: v.Severity, Summary: v.Summary, Fixed: v.Fixed, URL: v.URL,
+				})
+			}
+			if err := p.st.ReplaceVulnerabilities(ctx, d.ID, mv); err == nil {
+				scanned++
+				found += len(mv)
+			}
+			time.Sleep(3 * time.Second) // schonend zu OSV.dev
+		}
+		p.log.Info("cve-hintergrund-scan fertig", "geräte", scanned, "treffer", found)
+	}
+	time.Sleep(2 * time.Minute) // nicht direkt beim Start scannen
+	scan()
+	t := time.NewTicker(24 * time.Hour)
+	defer t.Stop()
+	for range t.C {
+		scan()
+	}
 }
 
 // pruneLoop löscht periodisch die Task-/Befehls-Historie, die älter als die

@@ -93,6 +93,10 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 			sum.DevicesWithPendingPatches++
 			sum.PendingPatches += *d.UpdatesCount
 		}
+		if d.VulnCount > 0 {
+			sum.DevicesWithVulns++
+			sum.Vulnerabilities += d.VulnCount
+		}
 	}
 	if events, err := s.store.RecentCheckEvents(r.Context(), 20); err == nil {
 		sum.RecentEvents = events

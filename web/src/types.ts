@@ -260,6 +260,7 @@ export interface Device {
   checks_failing?: number;
   tasks_total?: number;
   tasks_failing?: number;
+  vuln_count?: number;
   assigned_checks?: number;
   assigned_tasks?: number;
   check_results?: CheckResult[];
@@ -334,6 +335,8 @@ export interface DashboardSummary {
   failing_tasks: number;
   devices_with_pending_patches: number;
   pending_patches: number;
+  devices_with_vulns: number;
+  vulnerabilities: number;
   recent_events: CheckEvent[];
 }
 

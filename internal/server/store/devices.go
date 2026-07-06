@@ -149,7 +149,8 @@ const deviceCols = `d.id, d.hostname, d.os, d.os_version, d.vendor, d.model, d.s
 	(SELECT COUNT(DISTINCT tr.task_id) FROM task_results tr WHERE tr.device_id=d.id),
 	(SELECT COUNT(*) FROM task_results tr WHERE tr.device_id=d.id AND tr.exit_code <> 0
 		AND tr.ran_at = (SELECT MAX(tr2.ran_at) FROM task_results tr2
-			WHERE tr2.device_id=tr.device_id AND tr2.task_id=tr.task_id))`
+			WHERE tr2.device_id=tr.device_id AND tr2.task_id=tr.task_id)),
+	(SELECT COUNT(*) FROM vulnerabilities v WHERE v.device_id=d.id)`
 
 const deviceFrom = ` FROM devices d
 	LEFT JOIN sites s ON s.id = d.site_id
@@ -343,6 +344,11 @@ func (s *Store) ApprovedPatches(ctx context.Context, deviceID string) ([]string,
 		out = append(out, n)
 	}
 	return out, rows.Err()
+}
+
+// DeviceSoftware liefert die installierte Software eines Geräts (für den CVE-Scan).
+func (s *Store) DeviceSoftware(ctx context.Context, deviceID string) ([]model.SoftwarePackage, error) {
+	return s.softwareFor(ctx, deviceID)
 }
 
 func (s *Store) softwareFor(ctx context.Context, deviceID string) ([]model.SoftwarePackage, error) {
@@ -629,7 +635,7 @@ func scanDevice(row scanner) (*model.Device, error) {
 		&d.CPUModel, &d.CPUCores, &d.CPUSockets, &d.CPUThreads, &d.PublicIP,
 		&mem, &d.AgentVersion, &d.FirstSeen, &lastSeen, &d.EnrolledAt, &d.Revoked, &users,
 		&updatesCount, &updatesCheckedAt, &d.Notes, &siteID, &siteName, &clientID, &clientName,
-		&d.ChecksTotal, &d.ChecksFailing, &d.TasksTotal, &d.TasksFailing)
+		&d.ChecksTotal, &d.ChecksFailing, &d.TasksTotal, &d.TasksFailing, &d.VulnCount)
 	if err != nil {
 		return nil, err
 	}
