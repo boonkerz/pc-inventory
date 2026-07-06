@@ -100,6 +100,22 @@ func (s *Store) DeleteClient(ctx context.Context, id string) error {
 	return tx.Commit()
 }
 
+// CountDevicesForClient zählt die (nicht widerrufenen) Geräte aller Sites eines Clients.
+func (s *Store) CountDevicesForClient(ctx context.Context, clientID string) (int, error) {
+	var n int
+	err := s.db.QueryRowContext(ctx, s.rebind(
+		`SELECT COUNT(*) FROM devices d JOIN sites s ON s.id=d.site_id WHERE s.client_id=? AND d.revoked=0`), clientID).Scan(&n)
+	return n, err
+}
+
+// CountDevicesForSite zählt die (nicht widerrufenen) Geräte einer Site.
+func (s *Store) CountDevicesForSite(ctx context.Context, siteID string) (int, error) {
+	var n int
+	err := s.db.QueryRowContext(ctx, s.rebind(
+		`SELECT COUNT(*) FROM devices WHERE site_id=? AND revoked=0`), siteID).Scan(&n)
+	return n, err
+}
+
 func (s *Store) siteIDsOf(ctx context.Context, tx *sql.Tx, clientID string) ([]string, error) {
 	rows, err := tx.QueryContext(ctx, s.rebind(`SELECT id FROM sites WHERE client_id = ?`), clientID)
 	if err != nil {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "../api";
+import { api, ApiError } from "../api";
 import { useI18n } from "../i18n";
 import type { ClientTree as Tree } from "../types";
 import { Modal } from "./Modal";
@@ -73,8 +73,23 @@ export function ClientTree({ tree, total, selected, onSelect, isAdmin }: Props) 
     },
     onSuccess: refresh,
   });
-  const delClient = useMutation({ mutationFn: (id: string) => api.del(`/clients/${id}`), onSuccess: refresh });
-  const delSite = useMutation({ mutationFn: (id: string) => api.del(`/sites/${id}`), onSuccess: refresh });
+  // Löschen mit Blockade: hängen noch Geräte dran (HTTP 409), erst nach Bestätigung
+  // mit ?force=true fortfahren (Geräte bleiben, werden „nicht zugeordnet").
+  const deleteOrg = async (kind: "clients" | "sites", id: string) => {
+    try {
+      await api.del(`/${kind}/${id}`);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409 && e.data?.device_count) {
+        const n = e.data.device_count as number;
+        if (!confirm(t("Daran hängen noch {n} Gerät(e). Sie bleiben erhalten, werden aber nicht mehr zugeordnet. Trotzdem löschen?", { n }))) return;
+        await api.del(`/${kind}/${id}?force=true`);
+      } else {
+        alert((e as Error).message);
+        return;
+      }
+    }
+    refresh();
+  };
 
   const toggle = (id: string) =>
     setExpanded((s) => {
@@ -123,7 +138,7 @@ export function ClientTree({ tree, total, selected, onSelect, isAdmin }: Props) 
                   <button title={t("Standort hinzufügen")} onClick={() => createSite.mutate(c.id)}>+</button>
                   <button title={t("Felder")} onClick={() => setFieldsFor({ model: "client", id: c.id, name: c.name })}>⊞</button>
                   <button title={t("Umbenennen")} onClick={() => renameClient.mutate({ id: c.id, cur: c.name })}>✎</button>
-                  <button title={t("Löschen")} onClick={() => confirm(t("Client „{name}“ löschen?", { name: c.name })) && delClient.mutate(c.id)}>×</button>
+                  <button title={t("Löschen")} onClick={() => confirm(t("Client „{name}“ löschen?", { name: c.name })) && deleteOrg("clients", c.id)}>×</button>
                 </span>
               )}
             </div>
@@ -139,7 +154,7 @@ export function ClientTree({ tree, total, selected, onSelect, isAdmin }: Props) 
                     <span className="tree-actions">
                       <button title={t("Felder")} onClick={() => setFieldsFor({ model: "site", id: s.id, name: s.name })}>⊞</button>
                       <button title={t("Umbenennen")} onClick={() => renameSite.mutate({ id: s.id, cur: s.name })}>✎</button>
-                      <button title={t("Löschen")} onClick={() => confirm(t("Standort „{name}“ löschen?", { name: s.name })) && delSite.mutate(s.id)}>×</button>
+                      <button title={t("Löschen")} onClick={() => confirm(t("Standort „{name}“ löschen?", { name: s.name })) && deleteOrg("sites", s.id)}>×</button>
                     </span>
                   )}
                 </div>

@@ -5,9 +5,11 @@ const BASE = "/api/v1";
 
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  data: any;
+  constructor(status: number, message: string, data?: any) {
     super(message);
     this.status = status;
+    this.data = data;
   }
 }
 
@@ -21,7 +23,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const text = await res.text();
   const data = text ? JSON.parse(text) : null;
   if (!res.ok) {
-    throw new ApiError(res.status, data?.error ?? res.statusText);
+    throw new ApiError(res.status, data?.error ?? res.statusText, data);
   }
   return data as T;
 }

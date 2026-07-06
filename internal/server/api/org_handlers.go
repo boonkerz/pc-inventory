@@ -58,7 +58,14 @@ func (s *Server) handleRenameClient(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleDeleteClient(w http.ResponseWriter, r *http.Request) {
-	if err := s.store.DeleteClient(r.Context(), chi.URLParam(r, "id")); err != nil {
+	id := chi.URLParam(r, "id")
+	if r.URL.Query().Get("force") != "true" {
+		if n, err := s.store.CountDevicesForClient(r.Context(), id); err == nil && n > 0 {
+			s.writeJSON(w, http.StatusConflict, map[string]any{"error": "has_devices", "device_count": n})
+			return
+		}
+	}
+	if err := s.store.DeleteClient(r.Context(), id); err != nil {
 		s.mapStoreErr(w, err)
 		return
 	}
@@ -100,7 +107,14 @@ func (s *Server) handleRenameSite(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleDeleteSite(w http.ResponseWriter, r *http.Request) {
-	if err := s.store.DeleteSite(r.Context(), chi.URLParam(r, "id")); err != nil {
+	id := chi.URLParam(r, "id")
+	if r.URL.Query().Get("force") != "true" {
+		if n, err := s.store.CountDevicesForSite(r.Context(), id); err == nil && n > 0 {
+			s.writeJSON(w, http.StatusConflict, map[string]any{"error": "has_devices", "device_count": n})
+			return
+		}
+	}
+	if err := s.store.DeleteSite(r.Context(), id); err != nil {
 		s.mapStoreErr(w, err)
 		return
 	}

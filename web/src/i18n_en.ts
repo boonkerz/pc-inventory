@@ -598,4 +598,5 @@ export const EN: Record<string, string> = {
   "Frage ab…": "Querying…",
   "Nicht verwaltetes Gerät (ohne Agent, aus dem Netzwerk-Scan). Keine Fernsteuerung/Checks – nur Bestandsdaten.": "Unmanaged device (no agent, from network scan). No remote control/checks – inventory data only.",
   "Druckerdaten": "Printer data",
+  "Daran hängen noch {n} Gerät(e). Sie bleiben erhalten, werden aber nicht mehr zugeordnet. Trotzdem löschen?": "{n} device(s) still attached. They are kept but become unassigned. Delete anyway?",
 };
