@@ -92,6 +92,7 @@ func (s *Server) handleCheckin(w http.ResponseWriter, r *http.Request) {
 		if err := s.store.SaveCommandResults(r.Context(), req.CommandResults); err != nil {
 			s.log.Error("befehls-ergebnisse speichern", "err", err)
 		}
+		s.importNetworkScans(r.Context(), req.CommandResults)
 	}
 	policy, err := s.store.EffectivePolicy(r.Context(), device.ID)
 	if err != nil {

@@ -410,6 +410,21 @@ type TaskResult struct {
 }
 
 // EnrollmentToken wird von Admins erzeugt und per GPO verteilt.
+// NetworkAsset ist ein beim Netzwerk-Scan gefundener Host, einer Site zugeordnet.
+type NetworkAsset struct {
+	ID        string    `json:"id"`
+	SiteID    string    `json:"site_id"`
+	SiteName  string    `json:"site_name,omitempty"`
+	IP        string    `json:"ip"`
+	MAC       string    `json:"mac"`
+	Hostname  string    `json:"hostname"`
+	Ports     string    `json:"ports"`
+	Note      string    `json:"note"`
+	Managed   bool      `json:"managed"` // entspricht einem verwalteten Gerät
+	FirstSeen time.Time `json:"first_seen"`
+	LastSeen  time.Time `json:"last_seen"`
+}
+
 // Vulnerability ist eine für ein Gerät erkannte Schwachstelle (CVE/OSV).
 type Vulnerability struct {
 	DeviceID   string    `json:"device_id,omitempty"`

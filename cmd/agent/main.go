@@ -334,6 +334,11 @@ func (p *program) runPolicy(ctx context.Context) {
 			go p.installPackage(ctx, cmd.ID, ids)
 			p.log.Info("software-installation gestartet", "command", cmd.ID)
 			continue
+		case "network_scan":
+			cidr, _ := cmd.Payload["cidr"].(string)
+			go p.networkScan(ctx, cmd.ID, cidr)
+			p.log.Info("netzwerk-scan gestartet", "command", cmd.ID, "cidr", cidr)
+			continue
 		case "dir_usage":
 			// Verzeichnis-Scan kann lange dauern -> asynchron mit Timeout.
 			path, _ := cmd.Payload["path"].(string)
@@ -550,6 +555,25 @@ func (p *program) writeFile(ctx context.Context, xfer, path string) (int, string
 		return 1, "Schreiben fehlgeschlagen: " + err.Error()
 	}
 	return 0, fmt.Sprintf("%d Bytes geschrieben nach %s", len(data), path)
+}
+
+// networkScan tastet den CIDR-Bereich ab und meldet die Funde als JSON (Output).
+func (p *program) networkScan(ctx context.Context, cmdID, cidr string) {
+	exit, output := 0, ""
+	hosts, err := collect.NetworkScan(ctx, cidr)
+	if err != nil {
+		exit, output = 1, "Scan fehlgeschlagen: "+err.Error()
+	} else {
+		b, _ := json.Marshal(hosts)
+		output = string(b)
+	}
+	p.mu.Lock()
+	p.pendingCmdResults = append(p.pendingCmdResults, shared.CommandResult{
+		CommandID: cmdID, ExitCode: exit, Output: output, RanAt: time.Now().UTC(),
+	})
+	p.mu.Unlock()
+	p.log.Info("netzwerk-scan abgeschlossen", "command", cmdID, "hosts", len(hosts))
+	p.requestCheckin()
 }
 
 // installPackage installiert ein Paket über den Paketmanager und meldet das Ergebnis.

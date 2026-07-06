@@ -9,8 +9,9 @@ import { Settings } from "../pages/Settings";
 import { Account } from "../pages/Account";
 import { BulkActions } from "./BulkActions";
 import { FleetVulnerabilities } from "./FleetVulnerabilities";
+import { NetworkScan } from "./NetworkScan";
 
-type ModalKey = "groups" | "settings" | "account" | "bulk" | "vulns";
+type ModalKey = "groups" | "settings" | "account" | "bulk" | "vulns" | "netscan";
 
 export function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
@@ -33,6 +34,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <button className="navbtn" onClick={() => setModal("groups")}>{t("Tags")}</button>
           <button className="navbtn" onClick={() => setModal("vulns")}>{t("Schwachstellen")}</button>
           {canOperate && <button className="navbtn" onClick={() => setModal("bulk")}>{t("Sammelaktion")}</button>}
+          {canOperate && <button className="navbtn" onClick={() => setModal("netscan")}>{t("Netzwerk-Scan")}</button>}
           {isAdmin && <button className="navbtn" onClick={() => setModal("settings")}>{t("Einstellungen")}</button>}
         </nav>
         <div className="topbar-right">
@@ -53,6 +55,7 @@ export function Layout({ children }: { children: ReactNode }) {
       {modal === "account" && <Modal onClose={() => setModal(null)}><Account /></Modal>}
       {modal === "bulk" && <Modal onClose={() => setModal(null)}><BulkActions /></Modal>}
       {modal === "vulns" && <Modal onClose={() => setModal(null)}><FleetVulnerabilities /></Modal>}
+      {modal === "netscan" && <Modal onClose={() => setModal(null)}><NetworkScan /></Modal>}
     </div>
   );
 }

@@ -350,6 +350,19 @@ export interface SoftwareEvent {
   created_at: string;
 }
 
+export interface NetworkAsset {
+  id: string;
+  site_id: string;
+  ip: string;
+  mac: string;
+  hostname: string;
+  ports: string;
+  note: string;
+  managed: boolean;
+  first_seen: string;
+  last_seen: string;
+}
+
 export interface Vulnerability {
   device_id?: string;
   hostname?: string;

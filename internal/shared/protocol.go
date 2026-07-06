@@ -203,6 +203,14 @@ type Command struct {
 	Payload map[string]any `json:"payload,omitempty"`
 }
 
+// NetworkHost ist ein beim Netzwerk-Scan gefundener Host.
+type NetworkHost struct {
+	IP       string `json:"ip"`
+	MAC      string `json:"mac,omitempty"`
+	Hostname string `json:"hostname,omitempty"`
+	Ports    []int  `json:"ports,omitempty"`
+}
+
 // WaitResponse ist die Antwort des Wake-Long-Polls (/agent/wait). Sie weist den
 // Agent an, sich für eine Echtzeit-Session zu melden. Type ist leer ("" = idle,
 // Timeout ohne Auftrag), "checkin", "open_terminal" oder "open_vnc".
