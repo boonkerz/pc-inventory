@@ -19,6 +19,19 @@ function cidrFromIP(ip: string): string {
   return m ? `${m[1]}.${m[2]}.${m[3]}.0/24` : "";
 }
 
+// guessType leitet aus den offenen Ports einen groben Gerätetyp ab.
+function guessType(ports: string): string {
+  const p = new Set(ports.split(",").map((x) => x.trim()));
+  const has = (...xs: string[]) => xs.some((x) => p.has(x));
+  if (has("9100", "631", "515")) return "🖨 Drucker";
+  if (has("3389")) return "🪟 Windows (RDP)";
+  if (has("445", "139", "135")) return "🪟 Windows/SMB";
+  if (has("5900")) return "🖥 VNC";
+  if (has("22")) return "🐧 SSH/Linux";
+  if (has("80", "443", "8080")) return "🌐 Web/Gerät";
+  return "—";
+}
+
 // NetworkScan lässt einen Agenten ein Segment scannen und importiert die Funde in eine Site.
 export function NetworkScan() {
   const { t } = useI18n();
@@ -116,12 +129,13 @@ export function NetworkScan() {
             <p className="muted">{t("Noch keine Assets. Starte einen Scan.")}</p>
           ) : (
             <table className="table">
-              <thead><tr><th>IP</th><th>Hostname</th><th>MAC</th><th>{t("Ports")}</th><th>{t("Verwaltet")}</th><th></th></tr></thead>
+              <thead><tr><th>IP</th><th>Hostname</th><th>{t("Typ")}</th><th>MAC</th><th>{t("Ports")}</th><th>{t("Verwaltet")}</th><th></th></tr></thead>
               <tbody>
                 {assets.map((a) => (
                   <tr key={a.id}>
                     <td className="mono">{a.ip}</td>
                     <td>{a.hostname || "—"}</td>
+                    <td>{guessType(a.ports)}</td>
                     <td className="mono muted">{a.mac || "—"}</td>
                     <td className="mono muted small">{a.ports || "—"}</td>
                     <td>{a.managed ? <span className="badge badge-online">{t("verwaltet")}</span> : <span className="muted">—</span>}</td>

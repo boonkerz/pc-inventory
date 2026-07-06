@@ -3,6 +3,7 @@ package netscan
 import (
 	"context"
 	"net"
+	"os"
 	"os/exec"
 	"regexp"
 	"sort"
@@ -14,8 +15,9 @@ import (
 	"github.com/thomaspeterson/pc-inventory/internal/shared"
 )
 
-// commonPorts werden zur Erreichbarkeits-/Dienst-Erkennung angetastet.
-var commonPorts = []int{22, 80, 443, 445, 139, 135, 3389, 53, 8080, 5900, 21, 23, 25, 3306}
+// commonPorts werden zur Erreichbarkeits-/Dienst-Erkennung angetastet (inkl.
+// Drucker: 9100 RAW/JetDirect, 631 IPP, 515 LPD).
+var commonPorts = []int{22, 80, 443, 445, 139, 135, 3389, 53, 8080, 5900, 21, 23, 25, 3306, 9100, 631, 515}
 
 const (
 	scanMaxHosts = 4096
@@ -124,21 +126,35 @@ var (
 	reMAC  = regexp.MustCompile(`\b([0-9a-fA-F]{1,2}(?:[:-][0-9a-fA-F]{1,2}){5})\b`)
 )
 
-// arpTable liest die ARP-Tabelle (`arp -a`) und liefert IP->MAC (normalisiert).
+// arpTable liefert IP->MAC aus mehreren Quellen (net-tools `arp` ist nicht überall
+// installiert): /proc/net/arp (Linux) und `ip neigh` (Linux) als Primärquellen,
+// `arp -a` (Windows/macOS/Linux mit net-tools) als Ergänzung.
 func arpTable() map[string]string {
 	out := map[string]string{}
-	cmd := exec.Command("arp", "-a")
-	data, err := cmd.Output()
-	if err != nil {
-		return out
+	var blobs []string
+	if b, err := os.ReadFile("/proc/net/arp"); err == nil {
+		blobs = append(blobs, string(b))
 	}
-	for _, line := range strings.Split(string(data), "\n") {
-		ip := reIPv4.FindString(line)
-		mac := reMAC.FindString(line)
-		if ip == "" || mac == "" {
-			continue
+	for _, c := range [][]string{{"ip", "neigh"}, {"arp", "-a"}} {
+		if b, err := exec.Command(c[0], c[1:]...).Output(); err == nil {
+			blobs = append(blobs, string(b))
 		}
-		out[ip] = normalizeMAC(mac)
+	}
+	for _, blob := range blobs {
+		for _, line := range strings.Split(blob, "\n") {
+			ip := reIPv4.FindString(line)
+			mac := reMAC.FindString(line)
+			if ip == "" || mac == "" {
+				continue
+			}
+			nm := normalizeMAC(mac)
+			if nm == "00:00:00:00:00:00" {
+				continue
+			}
+			if _, ok := out[ip]; !ok {
+				out[ip] = nm
+			}
+		}
 	}
 	return out
 }
