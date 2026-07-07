@@ -509,18 +509,18 @@ export function DevicePanel({ id, focusTab, focusKey }: { id: string; focusTab?:
                     <>
                       {/^linux|debian|ubuntu/i.test(device.os) && (
                         <select value={aptMode} onChange={(e) => setAptMode(e.target.value as "full" | "safe")}
-                          title={t("apt-Strategie bei „__ALLINSTALL__“")}>
+                          title={t("apt-Strategie bei „Alle installieren“")}>
                           <option value="full">{t("Voll-Upgrade (dist-upgrade)")}</option>
                           <option value="safe">{t("Sicheres Upgrade (upgrade)")}</option>
                         </select>
                       )}
                       <button className="btn ghost sm" disabled={installUpdates.isPending}
                         onClick={() => confirm(t("Nur die genehmigten Patches installieren?")) && installUpdates.mutate({ approved: true, apt_mode: aptMode })}>
-                        __GENAPPROVE__
+                        {t("Genehmigte installieren")}
                       </button>
                       <button className="btn primary sm" disabled={installUpdates.isPending}
                         onClick={() => confirm(t("ALLE ausstehenden Updates installieren? Kann lange dauern und ggf. einen Neustart erfordern.")) && installUpdates.mutate({ approved: false, apt_mode: aptMode })}>
-                        __ALLINSTALL__
+                        {t("Alle installieren")}
                       </button>
                     </>
                   )}
