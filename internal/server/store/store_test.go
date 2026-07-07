@@ -724,3 +724,72 @@ func TestRemoteConsent(t *testing.T) {
 		t.Fatalf("nach clear: %s", m)
 	}
 }
+
+func TestMergeUnmanagedDuplicates(t *testing.T) {
+	st := newStore(t)
+	ctx := context.Background()
+
+	client := &model.Client{ID: store.NewID(), Name: "c"}
+	if err := st.CreateClient(ctx, client); err != nil {
+		t.Fatalf("CreateClient: %v", err)
+	}
+	site := &model.Site{ID: store.NewID(), ClientID: client.ID, Name: "s"}
+	if err := st.CreateSite(ctx, site); err != nil {
+		t.Fatalf("CreateSite: %v", err)
+	}
+
+	// Scan -> Asset -> als nicht verwaltetes Gerät übernehmen (MAC + IP).
+	if _, err := st.UpsertNetworkAssets(ctx, site.ID, []shared.NetworkHost{
+		{IP: "192.168.178.163", MAC: "aa:bb:cc:dd:ee:ff", Hostname: "canbus", Ports: []int{22}},
+	}); err != nil {
+		t.Fatalf("UpsertNetworkAssets: %v", err)
+	}
+	assets, err := st.NetworkAssetsForSite(ctx, site.ID)
+	if err != nil || len(assets) != 1 {
+		t.Fatalf("NetworkAssetsForSite: %v / %d", err, len(assets))
+	}
+	placeholderID, err := st.AdoptNetworkAsset(ctx, assets[0].ID)
+	if err != nil {
+		t.Fatalf("AdoptNetworkAsset: %v", err)
+	}
+	// Notiz am Platzhalter -> soll übernommen werden.
+	if err := st.SetDeviceNotes(ctx, placeholderID, "am Scan hinterlegt"); err != nil {
+		t.Fatalf("SetDeviceNotes: %v", err)
+	}
+
+	// Jetzt Agent auf demselben Host: verwaltetes Gerät mit gleicher MAC (andere Schreibweise).
+	sid := site.ID
+	dev := &model.Device{ID: store.NewID(), Hostname: "canbus", OS: "linux", SiteID: &sid}
+	if err := st.CreateDevice(ctx, dev, auth.HashToken("tok")); err != nil {
+		t.Fatalf("CreateDevice: %v", err)
+	}
+	if err := st.UpdateInventory(ctx, dev.ID, shared.Inventory{
+		Hostname:   "canbus",
+		Interfaces: []shared.Interface{{Name: "eth0", MAC: "AA:BB:CC:DD:EE:FF", IPv4: []string{"192.168.178.163"}}},
+	}); err != nil {
+		t.Fatalf("UpdateInventory: %v", err)
+	}
+
+	n, err := st.MergeUnmanagedDuplicates(ctx, dev.ID)
+	if err != nil {
+		t.Fatalf("MergeUnmanagedDuplicates: %v", err)
+	}
+	if n != 1 {
+		t.Fatalf("erwartete 1 entfernten Platzhalter, bekam %d", n)
+	}
+	// Platzhalter ist weg, Agent-Gerät bleibt und hat die Notiz übernommen.
+	if _, err := st.GetDevice(ctx, placeholderID); err != store.ErrNotFound {
+		t.Fatalf("Platzhalter sollte gelöscht sein, err=%v", err)
+	}
+	got, err := st.GetDevice(ctx, dev.ID)
+	if err != nil {
+		t.Fatalf("GetDevice Agent: %v", err)
+	}
+	if got.Notes != "am Scan hinterlegt" {
+		t.Fatalf("Notiz sollte übernommen sein, bekam %q", got.Notes)
+	}
+	// Idempotent: zweiter Lauf entfernt nichts mehr.
+	if n2, _ := st.MergeUnmanagedDuplicates(ctx, dev.ID); n2 != 0 {
+		t.Fatalf("zweiter Lauf sollte 0 sein, bekam %d", n2)
+	}
+}

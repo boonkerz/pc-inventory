@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"strconv"
 	"strings"
@@ -168,4 +169,103 @@ func (s *Store) AdoptAllForSite(ctx context.Context, siteID string) (int, error)
 		n++
 	}
 	return n, nil
+}
+
+// MergeUnmanagedDuplicates entfernt nicht verwaltete Platzhalter-Geräte (managed=0),
+// die dieselbe MAC oder IPv4 wie das verwaltete Gerät devID haben. Typischer Fall:
+// ein per Netzwerk-Scan übernommenes Gerät, auf dem anschließend ein Agent installiert
+// wird – dann würden sonst zwei Einträge desselben Hosts nebeneinander stehen. Eine
+// evtl. am Platzhalter hinterlegte Notiz wird übernommen, falls das Agent-Gerät keine
+// hat. Liefert die Anzahl entfernter Platzhalter.
+func (s *Store) MergeUnmanagedDuplicates(ctx context.Context, devID string) (int, error) {
+	// MAC- und IPv4-Adressen des verwalteten Geräts sammeln.
+	rows, err := s.db.QueryContext(ctx, s.rebind(
+		`SELECT mac, ipv4 FROM interfaces WHERE device_id=?`), devID)
+	if err != nil {
+		return 0, err
+	}
+	var macs, ips []string
+	for rows.Next() {
+		var mac, ip sql.NullString
+		if err := rows.Scan(&mac, &ip); err != nil {
+			rows.Close()
+			return 0, err
+		}
+		if m := strings.ToLower(strings.TrimSpace(mac.String)); m != "" && m != "00:00:00:00:00:00" {
+			macs = append(macs, m)
+		}
+		if v := strings.TrimSpace(ip.String); v != "" {
+			ips = append(ips, v)
+		}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return 0, err
+	}
+	if len(macs) == 0 && len(ips) == 0 {
+		return 0, nil
+	}
+
+	// Kandidaten suchen: managed=0 mit passender MAC oder IPv4 (nicht das Gerät selbst).
+	var conds []string
+	var args []any
+	if len(macs) > 0 {
+		in, a := placeholders(macs)
+		conds = append(conds, "LOWER(i.mac) IN ("+in+")")
+		args = append(args, a...)
+	}
+	if len(ips) > 0 {
+		in, a := placeholders(ips)
+		conds = append(conds, "i.ipv4 IN ("+in+")")
+		args = append(args, a...)
+	}
+	q := `SELECT DISTINCT i.device_id FROM interfaces i JOIN devices d ON d.id = i.device_id
+		WHERE d.managed = 0 AND i.device_id <> ? AND (` + strings.Join(conds, " OR ") + `)`
+	drows, err := s.db.QueryContext(ctx, s.rebind(q), append([]any{devID}, args...)...)
+	if err != nil {
+		return 0, err
+	}
+	var dupIDs []string
+	for drows.Next() {
+		var id string
+		if err := drows.Scan(&id); err != nil {
+			drows.Close()
+			return 0, err
+		}
+		dupIDs = append(dupIDs, id)
+	}
+	drows.Close()
+	if err := drows.Err(); err != nil {
+		return 0, err
+	}
+	if len(dupIDs) == 0 {
+		return 0, nil
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback() //nolint:errcheck
+	var myNotes sql.NullString
+	_ = tx.QueryRowContext(ctx, s.rebind(`SELECT notes FROM devices WHERE id=?`), devID).Scan(&myNotes)
+	for _, dup := range dupIDs {
+		if strings.TrimSpace(myNotes.String) == "" {
+			var n sql.NullString
+			_ = tx.QueryRowContext(ctx, s.rebind(`SELECT notes FROM devices WHERE id=?`), dup).Scan(&n)
+			if strings.TrimSpace(n.String) != "" {
+				if _, err := tx.ExecContext(ctx, s.rebind(`UPDATE devices SET notes=? WHERE id=?`), n.String, devID); err != nil {
+					return 0, err
+				}
+				myNotes = n
+			}
+		}
+		if _, err := tx.ExecContext(ctx, s.rebind(`DELETE FROM interfaces WHERE device_id=?`), dup); err != nil {
+			return 0, err
+		}
+		if _, err := tx.ExecContext(ctx, s.rebind(`DELETE FROM devices WHERE id=?`), dup); err != nil {
+			return 0, err
+		}
+	}
+	return len(dupIDs), tx.Commit()
 }

@@ -69,6 +69,14 @@ func (s *Server) handleCheckin(w http.ResponseWriter, r *http.Request) {
 		s.mapStoreErr(w, err)
 		return
 	}
+	// Nach dem Inventar (MAC/IP bekannt) etwaige Scan-Platzhalter desselben Hosts
+	// zusammenführen – z. B. wenn ein zuvor per Scan übernommenes Gerät jetzt einen
+	// Agenten bekommen hat.
+	if n, err := s.store.MergeUnmanagedDuplicates(r.Context(), device.ID); err != nil {
+		s.log.Error("scan-duplikate zusammenführen", "err", err)
+	} else if n > 0 {
+		s.log.Info("scan-platzhalter zusammengeführt", "device_id", device.ID, "entfernt", n)
+	}
 	s.alertSoftwareChanges(r.Context(), device, before)
 	if req.Sample != nil {
 		_ = s.store.InsertMetricsSample(r.Context(), device.ID, time.Now().UnixMilli(), req.Sample.CPU, req.Sample.Mem, req.Sample.Disk)
