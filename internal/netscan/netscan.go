@@ -76,8 +76,20 @@ func Scan(ctx context.Context, cidr string) ([]shared.NetworkHost, error) {
 		if mac := arp[found[i].IP]; mac != "" {
 			found[i].MAC = mac
 		}
-		found[i].Hostname = reverseDNS(found[i].IP)
 	}
+	// Hostnamen parallel auflösen (Reverse-DNS → NetBIOS → mDNS je Host bis ~1 s).
+	var hg sync.WaitGroup
+	sem := make(chan struct{}, scanWorkers)
+	for i := range found {
+		hg.Add(1)
+		go func(i int) {
+			defer hg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			found[i].Hostname = resolveHostname(found[i].IP)
+		}(i)
+	}
+	hg.Wait()
 	sort.Slice(found, func(i, j int) bool { return ipLess(found[i].IP, found[j].IP) })
 	return found, nil
 }
