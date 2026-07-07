@@ -265,6 +265,9 @@ func (s *Store) GetDevice(ctx context.Context, id string) (*model.Device, error)
 	if d.Commands, err = s.CommandsFor(ctx, id, 20); err != nil {
 		return nil, err
 	}
+	if d.ListenPorts, err = s.ListenPortsFor(ctx, id); err != nil {
+		return nil, err
+	}
 	// Anzahl wirksamer Checks/Tasks (für die Statusmeldung "zugewiesen vs. ausgewertet").
 	if bundle, err := s.EffectivePolicy(ctx, id); err == nil && bundle != nil {
 		d.AssignedChecks = len(bundle.Checks)
@@ -626,6 +629,49 @@ func (s *Store) interfacesFor(ctx context.Context, deviceID string) ([]model.Int
 			return nil, err
 		}
 		out = append(out, iface)
+	}
+	return out, rows.Err()
+}
+
+// ReplaceListenPorts ersetzt die lauschenden Sockets eines Geräts (Momentaufnahme
+// je Checkin). Leere Liste löscht die bisherigen Einträge.
+func (s *Store) ReplaceListenPorts(ctx context.Context, deviceID string, ports []shared.ListenPort) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback() //nolint:errcheck
+	if _, err := tx.ExecContext(ctx, s.rebind(`DELETE FROM listen_ports WHERE device_id=?`), deviceID); err != nil {
+		return err
+	}
+	now := time.Now().UTC()
+	for _, p := range ports {
+		if _, err := tx.ExecContext(ctx, s.rebind(`
+			INSERT INTO listen_ports (device_id, proto, address, port, process, pid, public, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`),
+			deviceID, p.Proto, p.Address, p.Port, p.Process, p.PID, p.Public, now); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+// ListenPortsFor liefert die lauschenden Sockets eines Geräts (öffentliche zuerst).
+func (s *Store) ListenPortsFor(ctx context.Context, deviceID string) ([]model.ListenPort, error) {
+	rows, err := s.db.QueryContext(ctx, s.rebind(`
+		SELECT proto, address, port, process, pid, public FROM listen_ports
+		WHERE device_id=? ORDER BY public DESC, port, proto`), deviceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []model.ListenPort
+	for rows.Next() {
+		var p model.ListenPort
+		if err := rows.Scan(&p.Proto, &p.Address, &p.Port, &p.Process, &p.PID, &p.Public); err != nil {
+			return nil, err
+		}
+		out = append(out, p)
 	}
 	return out, rows.Err()
 }

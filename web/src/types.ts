@@ -22,6 +22,15 @@ export interface Interface {
   ipv6: string;
 }
 
+export interface ListenPort {
+  proto: string;
+  address: string;
+  port: number;
+  process?: string;
+  pid?: number;
+  public: boolean;
+}
+
 export interface Group {
   id: string;
   name: string;
@@ -272,6 +281,7 @@ export interface Device {
   updates_checked_at?: string;
   available_updates?: UpdateItem[];
   interfaces?: Interface[];
+  listen_ports?: ListenPort[];
   groups?: Group[];
   software?: SoftwarePackage[];
   printers?: Printer[];

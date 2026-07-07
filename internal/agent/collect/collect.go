@@ -68,6 +68,9 @@ func Collect(ctx context.Context, agentVersion string) shared.Inventory {
 	// OS-spezifisch: GPUs und physische Festplatten.
 	inv.GPUs, inv.PhysicalDisks = hwExtras(ctx)
 
+	// Lauschende Sockets (Angriffsfläche / „nach außen offen").
+	inv.ListenPorts = ListenPorts(ctx)
+
 	return inv
 }
 

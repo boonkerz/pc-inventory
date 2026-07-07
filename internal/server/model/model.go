@@ -103,6 +103,7 @@ type Device struct {
 	CheckResults []CheckResult `json:"check_results,omitempty"`
 	TaskResults  []TaskResult  `json:"task_results,omitempty"`
 	Commands     []Command     `json:"commands,omitempty"`
+	ListenPorts  []ListenPort  `json:"listen_ports,omitempty"`
 
 	Disks         []Disk         `json:"disks,omitempty"`
 	PhysicalDisks []PhysicalDisk `json:"physical_disks,omitempty"`
@@ -155,6 +156,17 @@ type Interface struct {
 	MAC  string `json:"mac"`
 	IPv4 string `json:"ipv4"`
 	IPv6 string `json:"ipv6"`
+}
+
+// ListenPort ist ein lauschender Socket des Geräts (Angriffsfläche). Public=true,
+// wenn nicht nur an Loopback gebunden.
+type ListenPort struct {
+	Proto   string `json:"proto"`
+	Address string `json:"address"`
+	Port    int    `json:"port"`
+	Process string `json:"process,omitempty"`
+	PID     int    `json:"pid,omitempty"`
+	Public  bool   `json:"public"`
 }
 
 // Client ist die oberste Organisationsebene (Firma/Kunde). Enthält Sites.

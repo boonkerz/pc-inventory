@@ -138,10 +138,23 @@ type Inventory struct {
 	Software      []SoftwarePackage `json:"software,omitempty"`
 	Printers      []Printer         `json:"printers,omitempty"`
 	LoggedInUsers []string          `json:"logged_in_users,omitempty"`
+	ListenPorts   []ListenPort      `json:"listen_ports,omitempty"`
 	// OSUpdates ist nil, solange noch kein Update-Check lief (Status "unbekannt").
 	OSUpdates *OSUpdateInfo `json:"os_updates,omitempty"`
 
 	CollectedAt time.Time `json:"collected_at"`
+}
+
+// ListenPort ist ein lauschender Socket des Geräts (Angriffsfläche). Public=true,
+// wenn er nicht nur an Loopback gebunden ist (also grundsätzlich vom Netz aus
+// erreichbar – ob wirklich „von außen", hängt zusätzlich von NAT/Firewall ab).
+type ListenPort struct {
+	Proto   string `json:"proto"`   // tcp | tcp6 | udp | udp6
+	Address string `json:"address"` // Bind-Adresse (z. B. 0.0.0.0, ::, 127.0.0.1)
+	Port    int    `json:"port"`
+	Process string `json:"process,omitempty"`
+	PID     int    `json:"pid,omitempty"`
+	Public  bool   `json:"public"` // nicht nur an Loopback gebunden
 }
 
 // OSUpdateInfo beschreibt verfügbare Betriebssystem-Updates/Patches.

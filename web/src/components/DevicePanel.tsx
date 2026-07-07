@@ -574,6 +574,40 @@ export function DevicePanel({ id, focusTab, focusKey }: { id: string; focusTab?:
           </section>
         )}
 
+        {tab === "network" && (
+          <section className="card" style={{ marginTop: 12 }}>
+            <h3 className="muted small" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {t("Lauschende Ports")}
+              {(device.listen_ports ?? []).some((p) => p.public) && (
+                <span className="badge badge-offline"><span className="dot" /> {(device.listen_ports ?? []).filter((p) => p.public).length} {t("öffentlich")}</span>
+              )}
+            </h3>
+            <p className="muted small">{t("Vom Agent gemeldete lauschende Sockets. „Öffentlich“ = nicht nur an Loopback gebunden (vom Netz erreichbar; ob wirklich von außen, hängt von NAT/Firewall ab).")}</p>
+            {(device.listen_ports ?? []).length === 0 ? (
+              <p className="muted small">{t("Keine lauschenden Ports gemeldet (oder Agent noch nicht aktualisiert).")}</p>
+            ) : (
+              <div className="scroll-list">
+                <table className="table">
+                  <thead><tr><th>{t("Sichtbarkeit")}</th><th>{t("Proto")}</th><th>{t("Adresse")}</th><th>Port</th><th>{t("Prozess")}</th></tr></thead>
+                  <tbody>
+                    {device.listen_ports!.map((p, idx) => (
+                      <tr key={idx}>
+                        <td>{p.public
+                          ? <span className="badge badge-offline"><span className="dot" /> {t("öffentlich")}</span>
+                          : <span className="badge badge-online"><span className="dot" /> {t("lokal")}</span>}</td>
+                        <td className="mono small">{p.proto}</td>
+                        <td className="mono small">{p.address || "*"}</td>
+                        <td className="mono">{p.port}</td>
+                        <td className="muted small">{p.process || "—"}{p.pid ? ` (${p.pid})` : ""}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        )}
+
         {tab === "run" && canOperate && (
           <section className="card">
             <form className="inline-form" onSubmit={(e) => { e.preventDefault(); if (runScriptId) runScript.mutate(); }}>
