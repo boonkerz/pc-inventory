@@ -144,10 +144,14 @@ const deviceCols = `d.id, d.hostname, d.os, d.os_version, d.vendor, d.model, d.s
 	d.cpu_sockets, d.cpu_threads, d.public_ip,
 	d.memory_bytes, d.agent_version, d.first_seen, d.last_seen, d.enrolled_at, d.revoked, d.logged_in_users,
 	d.updates_count, d.updates_checked_at, d.notes, d.site_id, s.name, c.id, c.name,
-	(SELECT COUNT(*) FROM check_results cr WHERE cr.device_id=d.id),
-	(SELECT COUNT(*) FROM check_results cr WHERE cr.device_id=d.id AND cr.status='failing'),
-	(SELECT COUNT(DISTINCT tr.task_id) FROM task_results tr WHERE tr.device_id=d.id),
+	(SELECT COUNT(*) FROM check_results cr WHERE cr.device_id=d.id
+		AND EXISTS (SELECT 1 FROM policy_checks pc WHERE pc.id=cr.check_id)),
+	(SELECT COUNT(*) FROM check_results cr WHERE cr.device_id=d.id AND cr.status='failing'
+		AND EXISTS (SELECT 1 FROM policy_checks pc WHERE pc.id=cr.check_id)),
+	(SELECT COUNT(DISTINCT tr.task_id) FROM task_results tr WHERE tr.device_id=d.id
+		AND EXISTS (SELECT 1 FROM policy_tasks pt WHERE pt.id=tr.task_id)),
 	(SELECT COUNT(*) FROM task_results tr WHERE tr.device_id=d.id AND tr.exit_code <> 0
+		AND EXISTS (SELECT 1 FROM policy_tasks pt WHERE pt.id=tr.task_id)
 		AND tr.ran_at = (SELECT MAX(tr2.ran_at) FROM task_results tr2
 			WHERE tr2.device_id=tr.device_id AND tr2.task_id=tr.task_id)),
 	(SELECT COUNT(*) FROM vulnerabilities v WHERE v.device_id=d.id),

@@ -376,6 +376,13 @@ func TestPruneHistory(t *testing.T) {
 	if err := st.CreateDevice(ctx, dev, auth.HashToken("t")); err != nil {
 		t.Fatalf("CreateDevice: %v", err)
 	}
+	pol := &model.Policy{ID: store.NewID(), Name: "p"}
+	if err := st.CreatePolicy(ctx, pol); err != nil {
+		t.Fatalf("CreatePolicy: %v", err)
+	}
+	if err := st.AddTask(ctx, &model.PolicyTask{ID: "task-a", PolicyID: pol.ID, Name: "a"}); err != nil {
+		t.Fatalf("AddTask: %v", err)
+	}
 	old := time.Now().Add(-40 * 24 * time.Hour)
 	recent := time.Now().Add(-2 * 24 * time.Hour)
 	if err := st.SaveTaskResults(ctx, dev.ID, []shared.TaskResult{
@@ -454,6 +461,16 @@ func TestLatestTaskResults(t *testing.T) {
 	dev := &model.Device{ID: store.NewID(), Hostname: "pc", OS: "linux"}
 	if err := st.CreateDevice(ctx, dev, auth.HashToken("t")); err != nil {
 		t.Fatalf("CreateDevice: %v", err)
+	}
+	pol := &model.Policy{ID: store.NewID(), Name: "p"}
+	if err := st.CreatePolicy(ctx, pol); err != nil {
+		t.Fatalf("CreatePolicy: %v", err)
+	}
+	if err := st.AddTask(ctx, &model.PolicyTask{ID: "task-a", PolicyID: pol.ID, Name: "a"}); err != nil {
+		t.Fatalf("AddTask a: %v", err)
+	}
+	if err := st.AddTask(ctx, &model.PolicyTask{ID: "task-b", PolicyID: pol.ID, Name: "b"}); err != nil {
+		t.Fatalf("AddTask b: %v", err)
 	}
 	old := time.Now().Add(-2 * time.Hour)
 	mid := time.Now().Add(-1 * time.Hour)

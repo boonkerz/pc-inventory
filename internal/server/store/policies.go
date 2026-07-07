@@ -284,6 +284,14 @@ func (s *Store) CheckSeverities(ctx context.Context, ids []string) (map[string]s
 }
 
 func (s *Store) DeleteCheck(ctx context.Context, id string) error {
+	// Abhängige Zeilen mitlöschen, sonst bleiben verwaiste Ergebnisse/Ereignisse
+	// bei den Geräten stehen (der Check „taucht wieder auf").
+	if _, err := s.db.ExecContext(ctx, s.rebind(`DELETE FROM check_results WHERE check_id=?`), id); err != nil {
+		return err
+	}
+	if _, err := s.db.ExecContext(ctx, s.rebind(`DELETE FROM check_events WHERE check_id=?`), id); err != nil {
+		return err
+	}
 	return s.affect(s.db.ExecContext(ctx, s.rebind(`DELETE FROM policy_checks WHERE id=?`), id))
 }
 
@@ -306,6 +314,10 @@ func (s *Store) AddTask(ctx context.Context, t *model.PolicyTask) error {
 }
 
 func (s *Store) DeleteTask(ctx context.Context, id string) error {
+	// Verwaiste Task-Läufe mitlöschen (sonst bleibt der Task in Historie/Zählern).
+	if _, err := s.db.ExecContext(ctx, s.rebind(`DELETE FROM task_results WHERE task_id=?`), id); err != nil {
+		return err
+	}
 	return s.affect(s.db.ExecContext(ctx, s.rebind(`DELETE FROM policy_tasks WHERE id=?`), id))
 }
 
@@ -563,7 +575,7 @@ func (s *Store) SaveTaskResults(ctx context.Context, deviceID string, results []
 func (s *Store) CheckResultsFor(ctx context.Context, deviceID string) ([]model.CheckResult, error) {
 	rows, err := s.db.QueryContext(ctx, s.rebind(`
 		SELECT cr.check_id, cr.status, cr.output, cr.value, cr.updated_at, pc.name, pc.type
-		FROM check_results cr LEFT JOIN policy_checks pc ON pc.id=cr.check_id
+		FROM check_results cr JOIN policy_checks pc ON pc.id=cr.check_id
 		WHERE cr.device_id=? ORDER BY cr.status DESC, pc.name`), deviceID)
 	if err != nil {
 		return nil, err
@@ -589,7 +601,7 @@ func (s *Store) CheckResultsFor(ctx context.Context, deviceID string) ([]model.C
 func (s *Store) TaskResultsFor(ctx context.Context, deviceID string, limit int) ([]model.TaskResult, error) {
 	rows, err := s.db.QueryContext(ctx, s.rebind(`
 		SELECT tr.id, tr.task_id, tr.exit_code, tr.output, tr.ran_at, pt.name
-		FROM task_results tr LEFT JOIN policy_tasks pt ON pt.id=tr.task_id
+		FROM task_results tr JOIN policy_tasks pt ON pt.id=tr.task_id
 		WHERE tr.device_id=? ORDER BY tr.ran_at DESC LIMIT ?`), deviceID, limit)
 	if err != nil {
 		return nil, err
@@ -613,7 +625,7 @@ func (s *Store) TaskResultsFor(ctx context.Context, deviceID string, limit int) 
 func (s *Store) LatestTaskResultsFor(ctx context.Context, deviceID string) ([]model.TaskResult, error) {
 	rows, err := s.db.QueryContext(ctx, s.rebind(`
 		SELECT tr.id, tr.task_id, tr.exit_code, tr.output, tr.ran_at, pt.name
-		FROM task_results tr LEFT JOIN policy_tasks pt ON pt.id=tr.task_id
+		FROM task_results tr JOIN policy_tasks pt ON pt.id=tr.task_id
 		WHERE tr.device_id=? AND tr.ran_at = (
 			SELECT MAX(tr2.ran_at) FROM task_results tr2
 			WHERE tr2.device_id=tr.device_id AND tr2.task_id=tr.task_id)
