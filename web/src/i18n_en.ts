@@ -239,6 +239,8 @@ export const EN: Record<string, string> = {
   "vollständige Historie unter „Verlauf“": "full history under “History”",
   "Task": "Task",
   "Gelaufen": "Ran",
+  "Jetzt neu ausführen": "Run now",
+  "Jetzt neu starten": "Run now",
   "Status-Wechsel (Checks)": "Status changes (checks)",
   "Noch keine Statuswechsel protokolliert.": "No status changes recorded yet.",
   "Wechsel": "Change",

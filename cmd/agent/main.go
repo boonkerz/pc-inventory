@@ -293,10 +293,48 @@ func (p *program) runPolicy(ctx context.Context) {
 	}
 	p.mu.Unlock()
 
+	// Per Rerun angeforderte Checks/Tasks: werden unten zusätzlich zu den fälligen
+	// ausgeführt – unabhängig vom Zeitplan („sofort neu starten").
+	var forceChecks, forceTasks []string
+
 	for _, cmd := range queue {
 		var exit int
 		var output string
 		switch cmd.Type {
+		case "run_check":
+			cid, _ := cmd.Payload["check_id"].(string)
+			found := false
+			if bundle != nil {
+				for _, c := range bundle.Checks {
+					if c.ID == cid {
+						found = true
+						break
+					}
+				}
+			}
+			if !found {
+				exit, output = 1, "Check nicht (mehr) zugewiesen"
+				break
+			}
+			forceChecks = append(forceChecks, cid)
+			output = "Check wird neu ausgewertet"
+		case "run_task":
+			tid, _ := cmd.Payload["task_id"].(string)
+			found := false
+			if bundle != nil {
+				for _, t := range bundle.Tasks {
+					if t.ID == tid {
+						found = true
+						break
+					}
+				}
+			}
+			if !found {
+				exit, output = 1, "Task nicht (mehr) zugewiesen"
+				break
+			}
+			forceTasks = append(forceTasks, tid)
+			output = "Task wird neu gestartet"
 		case "run_script":
 			shell, _ := cmd.Payload["shell"].(string)
 			script, _ := cmd.Payload["script"].(string)
@@ -427,7 +465,7 @@ func (p *program) runPolicy(ctx context.Context) {
 		p.mu.Lock()
 		last := p.checkLastRun[c.ID]
 		p.mu.Unlock()
-		if freqDue(c.Frequency, last, now, "", "") {
+		if freqDue(c.Frequency, last, now, "", "") || contains(forceChecks, c.ID) {
 			dueChecks = append(dueChecks, c)
 		}
 	}
@@ -444,7 +482,7 @@ func (p *program) runPolicy(ctx context.Context) {
 		p.mu.Lock()
 		last := p.taskLastRun[t.ID]
 		p.mu.Unlock()
-		if !taskDue(t, last, now) {
+		if !taskDue(t, last, now) && !contains(forceTasks, t.ID) {
 			continue
 		}
 		exit, output, applicable := policy.RunScript(ctx, t.Shell, t.Script, t.Platforms)
@@ -630,6 +668,15 @@ func (p *program) installUpdates(ctx context.Context, cmdID string, names []stri
 
 // taskDue entscheidet, ob ein Task jetzt fällig ist. Ist eine Häufigkeit gesetzt,
 // gilt diese; sonst der Legacy-Plan (Intervall/täglich).
+func contains(list []string, v string) bool {
+	for _, x := range list {
+		if x == v {
+			return true
+		}
+	}
+	return false
+}
+
 func taskDue(t shared.TaskSpec, last, now time.Time) bool {
 	if t.Frequency != "" {
 		return freqDue(t.Frequency, last, now, t.DailyTime, t.Weekdays)

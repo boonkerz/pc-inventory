@@ -134,6 +134,8 @@ func (s *Server) routes() http.Handler {
 						r.Use(s.requireTech)
 						r.Put("/devices/{id}/notes", s.handleSetDeviceNotes)
 						r.Post("/devices/{id}/run", s.handleRunScript)
+						r.Post("/devices/{id}/checks/{checkID}/run", s.handleRunCheck)
+						r.Post("/devices/{id}/tasks/{taskID}/run", s.handleRunTask)
 						r.Post("/devices/{id}/service-control", s.handleServiceControl)
 						r.Post("/devices/{id}/process-kill", s.handleProcessKill)
 						r.Post("/devices/{id}/wake", s.handleWake)

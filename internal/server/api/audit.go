@@ -26,6 +26,8 @@ func (r *statusRecorder) WriteHeader(code int) {
 // auditActions bildet "METHOD Route-Muster" auf lesbare Aktionen ab.
 var auditActions = map[string]string{
 	"POST /devices/{id}/run":               "Skript ausgeführt",
+	"POST /devices/{id}/checks/{checkID}/run": "Check neu ausgeführt",
+	"POST /devices/{id}/tasks/{taskID}/run":   "Task neu gestartet",
 	"POST /devices/{id}/reboot":            "Gerät neu gestartet",
 	"POST /devices/{id}/read-file":         "Datei heruntergeladen",
 	"POST /devices/{id}/write-file":        "Datei hochgeladen",

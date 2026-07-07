@@ -79,6 +79,11 @@ export function DevicePanel({ id, focusTab, focusKey }: { id: string; focusTab?:
   const installUpdates = useMutation({ mutationFn: (v: { approved: boolean; apt_mode?: string }) => api.post(`/devices/${id}/install-updates`, v), onSuccess: invalidate });
   const approvePatch = useMutation({ mutationFn: (v: { name: string; approved: boolean }) => api.put(`/devices/${id}/patches/approve`, v), onSuccess: invalidate });
   const reboot = useMutation({ mutationFn: () => api.post(`/devices/${id}/reboot`), onSuccess: invalidate });
+  // Nach dem Anstoßen läuft der Check/Task erst beim (sofort geweckten) Checkin –
+  // deshalb verzögert nachladen, damit das frische Ergebnis erscheint.
+  const invalidateSoon = () => { invalidate(); setTimeout(invalidate, 4000); };
+  const runCheck = useMutation({ mutationFn: (checkID: string) => api.post(`/devices/${id}/checks/${checkID}/run`), onSuccess: invalidateSoon });
+  const runTask = useMutation({ mutationFn: (taskID: string) => api.post(`/devices/${id}/tasks/${taskID}/run`), onSuccess: invalidateSoon });
   const saveNotes = useMutation({
     mutationFn: (v: string) => api.put(`/devices/${id}/notes`, { notes: v }),
     onSuccess: () => { setNotes(null); invalidate(); },
@@ -297,7 +302,7 @@ export function DevicePanel({ id, focusTab, focusKey }: { id: string; focusTab?:
                 : <p className="muted">{t("Keine Checks zugewiesen (über Richtlinien).")}</p>
             ) : (
               <table className="table">
-                <thead><tr><th>{t("Status")}</th><th>{t("Check")}</th><th>{t("Ergebnis")}</th><th>{t("Geprüft")}</th></tr></thead>
+                <thead><tr><th>{t("Status")}</th><th>{t("Check")}</th><th>{t("Ergebnis")}</th><th>{t("Geprüft")}</th>{canOperate && <th></th>}</tr></thead>
                 <tbody>
                   {device.check_results!.map((c) => (
                     <tr key={c.check_id}>
@@ -305,6 +310,12 @@ export function DevicePanel({ id, focusTab, focusKey }: { id: string; focusTab?:
                       <td>{c.name || c.type}</td>
                       <td className="muted">{c.output}</td>
                       <td className="muted">{relTime(c.updated_at)}</td>
+                      {canOperate && (
+                        <td className="col-action">
+                          <button className="icon-btn" title={t("Jetzt neu ausführen")} disabled={runCheck.isPending}
+                            onClick={() => runCheck.mutate(c.check_id)}>↻</button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -323,7 +334,7 @@ export function DevicePanel({ id, focusTab, focusKey }: { id: string; focusTab?:
             ) : (
               <div className="scroll-list">
                 <table className="table">
-                  <thead><tr><th>{t("Status")}</th><th>{t("Task")}</th><th>{t("Ergebnis")}</th><th>{t("Gelaufen")}</th></tr></thead>
+                  <thead><tr><th>{t("Status")}</th><th>{t("Task")}</th><th>{t("Ergebnis")}</th><th>{t("Gelaufen")}</th>{canOperate && <th></th>}</tr></thead>
                   <tbody>
                     {device.task_results!.map((tk) => (
                       <tr key={tk.id}>
@@ -331,6 +342,12 @@ export function DevicePanel({ id, focusTab, focusKey }: { id: string; focusTab?:
                         <td>{tk.name || tk.task_id}</td>
                         <td className="muted mono small">{(tk.output || "").slice(0, 160) || `Exit ${tk.exit_code}`}</td>
                         <td className="muted">{relTime(tk.ran_at)}</td>
+                        {canOperate && (
+                          <td className="col-action">
+                            <button className="icon-btn" title={t("Jetzt neu starten")} disabled={runTask.isPending}
+                              onClick={() => runTask.mutate(tk.task_id)}>↻</button>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>

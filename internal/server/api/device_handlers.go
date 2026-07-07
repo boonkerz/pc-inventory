@@ -189,6 +189,31 @@ func (s *Server) handleListServices(w http.ResponseWriter, r *http.Request) {
 	s.writeJSON(w, http.StatusCreated, map[string]string{"command_id": id})
 }
 
+// handleRunCheck stößt eine sofortige Neuauswertung eines einzelnen Checks an
+// (unabhängig vom Zeitplan). Ergebnis kommt beim nächsten Checkin.
+func (s *Server) handleRunCheck(w http.ResponseWriter, r *http.Request) {
+	checkID := chi.URLParam(r, "checkID")
+	id, err := s.queueCommand(r.Context(), chi.URLParam(r, "id"), "run_check", "Check neu ausführen",
+		map[string]any{"check_id": checkID})
+	if err != nil {
+		s.mapStoreErr(w, err)
+		return
+	}
+	s.writeJSON(w, http.StatusCreated, map[string]string{"command_id": id})
+}
+
+// handleRunTask stößt einen sofortigen Neustart eines einzelnen Tasks an.
+func (s *Server) handleRunTask(w http.ResponseWriter, r *http.Request) {
+	taskID := chi.URLParam(r, "taskID")
+	id, err := s.queueCommand(r.Context(), chi.URLParam(r, "id"), "run_task", "Task neu starten",
+		map[string]any{"task_id": taskID})
+	if err != nil {
+		s.mapStoreErr(w, err)
+		return
+	}
+	s.writeJSON(w, http.StatusCreated, map[string]string{"command_id": id})
+}
+
 // handleMetrics reiht eine Live-Auslastungs-Momentaufnahme ein (Ergebnis per Polling).
 func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	id, err := s.queueCommand(r.Context(), chi.URLParam(r, "id"), "metrics", "Auslastung", nil)
