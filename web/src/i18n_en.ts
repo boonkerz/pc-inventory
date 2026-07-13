@@ -636,4 +636,8 @@ export const EN: Record<string, string> = {
   "Kopiert": "Copied",
   "Viewer herunterladen (Linux x86-64)": "Download viewer (Linux x86-64)",
   "ausführbar machen und in den PATH legen:": "make it executable and put it on your PATH:",
+  "Im Viewer öffnen": "Open in viewer",
+  "Startet den installierten Viewer direkt (pcinv://). Einmalig: pcinv-viewer --register": "Launches the installed viewer directly (pcinv://). Once: pcinv-viewer --register",
+  "Für den „Im Viewer öffnen\"-Button einmalig den Protokoll-Handler registrieren:": "For the \"Open in viewer\" button, register the protocol handler once:",
+  "Ohne Startcode gestartet, öffnet pcinv-viewer einen Dialog zum Einfügen.": "Started without a launch code, pcinv-viewer opens a paste dialog.",
 };

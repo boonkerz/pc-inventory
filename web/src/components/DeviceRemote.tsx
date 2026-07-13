@@ -120,19 +120,29 @@ export function DeviceRemote({ id, os, fill, autoStart, initialMonitor }: {
   const [nativeCode, setNativeCode] = useState("");
   const [nativeStatus, setNativeStatus] = useState("");
   const [copied, setCopied] = useState(false);
-  const startNative = async () => {
+  // base64url (url-sicher, passt für pcinv://-Links UND das Copy-Paste-Kommando).
+  const b64url = (s: string) => btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const genCode = async (): Promise<string | null> => {
     setNativeStatus(t("Startcode wird erzeugt…"));
     setNativeCode("");
     try {
       const s = await api.post<{ session: string; password: string; token: string }>(
         `/devices/${id}/remote/start`, { monitor });
       const blob = { url: location.origin, device: id, session: s.session, token: s.token, title: `Fernsteuerung ${id}` };
-      setNativeCode(btoa(JSON.stringify(blob)));
+      const code = b64url(JSON.stringify(blob));
+      setNativeCode(code);
       setNativeStatus("");
       setCopied(false);
+      return code;
     } catch {
       setNativeStatus(t("Startcode konnte nicht erzeugt werden."));
+      return null;
     }
+  };
+  const startNative = () => { void genCode(); };
+  const openInViewer = async () => {
+    const code = await genCode();
+    if (code) window.location.href = `pcinv://${code}`;
   };
   const nativeCmd = `pcinv-viewer ${nativeCode}`;
   const copyNative = () => {
@@ -218,7 +228,10 @@ export function DeviceRemote({ id, os, fill, autoStart, initialMonitor }: {
         <div className="remote-native">
           <div className="remote-native-head">
             <strong>⌨️ {t("Nativer Viewer (Linux) – volle Tastatur-Erfassung")}</strong>
-            <button className="btn ghost sm" onClick={startNative}>{t("Startcode erzeugen")}</button>
+            <span className="row-gap">
+              <button className="btn primary sm" onClick={openInViewer} title={t("Startet den installierten Viewer direkt (pcinv://). Einmalig: pcinv-viewer --register")}>▶ {t("Im Viewer öffnen")}</button>
+              <button className="btn ghost sm" onClick={startNative}>{t("Startcode erzeugen")}</button>
+            </span>
           </div>
           <p className="muted small">{t("Für Wayland/niri: der native Viewer erfasst alle Tasten (Win+T, Win+Zahlen, Alt+Tab …) und reicht sie ans Gerät durch – der Browser kann das auf Wayland nicht garantieren. Einmalig pcinv-viewer installieren.")}</p>
           <p className="muted small">
@@ -226,6 +239,7 @@ export function DeviceRemote({ id, os, fill, autoStart, initialMonitor }: {
             {" — "}{t("ausführbar machen und in den PATH legen:")}{" "}
             <code>chmod +x pcinv-viewer &amp;&amp; mv pcinv-viewer ~/.local/bin/</code>
           </p>
+          <p className="muted small">{t("Für den „Im Viewer öffnen\"-Button einmalig den Protokoll-Handler registrieren:")} <code>pcinv-viewer --register</code>{". "}{t("Ohne Startcode gestartet, öffnet pcinv-viewer einen Dialog zum Einfügen.")}</p>
           {nativeStatus && <p className="muted small">{nativeStatus}</p>}
           {nativeCode && (
             <div className="remote-native-cmd">

@@ -50,31 +50,78 @@ func (c *launchConfig) validate() error {
 func main() {
 	runtime.LockOSThread() // SDL: Video/Events müssen auf dem Main-Thread laufen.
 	log.SetFlags(0)
+	for _, a := range os.Args[1:] {
+		if a == "--register" || a == "-register" {
+			if err := registerScheme(); err != nil {
+				log.Fatalf("pcinv-viewer: register: %v", err)
+			}
+			log.Println("pcinv://-Handler registriert – der Browser-Button „Im Viewer öffnen\" funktioniert jetzt.")
+			return
+		}
+	}
 	cfg, err := loadConfig()
 	if err != nil {
 		log.Fatalf("pcinv-viewer: %v", err)
 	}
-	if err := run(cfg); err != nil {
+	if err := runApp(cfg); err != nil {
 		log.Fatalf("pcinv-viewer: %v", err)
 	}
 }
 
+// runApp initialisiert SDL, zeigt bei fehlendem Startcode den Connect-Dialog und
+// startet dann die Fernsteuerungs-Sitzung.
+func runApp(cfg *launchConfig) error {
+	if err := sdl.Init(sdl.INIT_VIDEO); err != nil {
+		return fmt.Errorf("sdl init: %w", err)
+	}
+	defer sdl.Quit()
+	// Keyboard-Grab: fordert auf Wayland shortcuts-inhibit an → alle Tasten kommen an.
+	sdl.SetHint(sdl.HINT_GRAB_KEYBOARD, "1")
+
+	if cfg == nil {
+		c, err := connectDialog()
+		if err != nil {
+			return err
+		}
+		if c == nil {
+			return nil // vom Nutzer abgebrochen
+		}
+		cfg = c
+	}
+	return runSession(cfg)
+}
+
+// decodeLaunchCode entschlüsselt einen base64-Startcode (url-safe oder Standard) in
+// eine launchConfig. Akzeptiert auch die pcinv://-URL-Form (inkl. prozent-kodiert).
+func decodeLaunchCode(code string) (*launchConfig, error) {
+	code = strings.TrimSpace(code)
+	code = strings.TrimPrefix(code, "pcinv://")
+	code = strings.Trim(code, "/")
+	if dec, err := url.QueryUnescape(code); err == nil {
+		code = dec
+	}
+	data, err := base64.RawURLEncoding.DecodeString(code)
+	if err != nil {
+		data, err = base64.StdEncoding.DecodeString(code)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("ungültiger Startcode: %v", err)
+	}
+	var c launchConfig
+	if err := json.Unmarshal(data, &c); err != nil {
+		return nil, fmt.Errorf("ungültiger Startcode: %v", err)
+	}
+	return &c, c.validate()
+}
+
 func loadConfig() (*launchConfig, error) {
 	args := os.Args[1:]
-	// Einzelner Nicht-Flag-Parameter = base64-Startcode (JSON).
+	// Einzelner Nicht-Flag-Parameter = base64-Startcode (JSON) oder pcinv://-Link.
 	if len(args) == 1 && !strings.HasPrefix(args[0], "-") {
-		data, err := base64.RawURLEncoding.DecodeString(args[0])
-		if err != nil {
-			data, err = base64.StdEncoding.DecodeString(args[0])
-		}
-		if err != nil {
-			return nil, fmt.Errorf("ungültiger Startcode: %v", err)
-		}
-		var c launchConfig
-		if err := json.Unmarshal(data, &c); err != nil {
-			return nil, fmt.Errorf("ungültiger Startcode: %v", err)
-		}
-		return &c, c.validate()
+		return decodeLaunchCode(args[0])
+	}
+	if len(args) == 0 {
+		return nil, nil // ohne Argumente -> Connect-Dialog
 	}
 	fs := flag.NewFlagSet("pcinv-viewer", flag.ContinueOnError)
 	c := &launchConfig{}
@@ -90,7 +137,9 @@ func loadConfig() (*launchConfig, error) {
 	return c, c.validate()
 }
 
-func run(cfg *launchConfig) error {
+// runSession baut die Verbindung auf und fährt Fenster + Event-/Render-Loop
+// (SDL ist von runApp bereits initialisiert).
+func runSession(cfg *launchConfig) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -121,13 +170,6 @@ func run(cfg *launchConfig) error {
 		return fmt.Errorf("rfb-handshake: %w", err)
 	}
 	log.Printf("verbunden – bildschirm %dx%d", rc.W, rc.H)
-
-	if err := sdl.Init(sdl.INIT_VIDEO); err != nil {
-		return fmt.Errorf("sdl init: %w", err)
-	}
-	defer sdl.Quit()
-	// Keyboard-Grab: fordert auf Wayland shortcuts-inhibit an → alle Tasten kommen an.
-	sdl.SetHint(sdl.HINT_GRAB_KEYBOARD, "1")
 
 	winW, winH := clampWindow(rc.W, rc.H)
 	title := cfg.Title

@@ -4,6 +4,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/binary"
 	"image"
 	"io"
@@ -145,6 +146,24 @@ func TestClientRawFrameE2E(t *testing.T) {
 		}
 	case <-time.After(3 * time.Second):
 		t.Fatal("kein frame empfangen")
+	}
+}
+
+func TestDecodeLaunchCode(t *testing.T) {
+	blob := `{"url":"https://x.de","device":"dev1","session":"s1","token":"t1"}`
+	std := base64.StdEncoding.EncodeToString([]byte(blob))
+	urlsafe := base64.RawURLEncoding.EncodeToString([]byte(blob))
+	for _, in := range []string{std, urlsafe, "pcinv://" + urlsafe, "pcinv://" + urlsafe + "/", "  pcinv://" + urlsafe + "  "} {
+		c, err := decodeLaunchCode(in)
+		if err != nil {
+			t.Fatalf("decode %q: %v", in, err)
+		}
+		if c.Device != "dev1" || c.Session != "s1" || c.Token != "t1" || c.URL != "https://x.de" {
+			t.Errorf("decode %q -> %+v", in, c)
+		}
+	}
+	if _, err := decodeLaunchCode("pcinv://not-base64!!!"); err == nil {
+		t.Error("erwartete Fehler bei ungültigem Code")
 	}
 }
 
