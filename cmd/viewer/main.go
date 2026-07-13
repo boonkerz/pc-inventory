@@ -207,9 +207,9 @@ func runSession(cfg *launchConfig) error {
 		return fmt.Errorf("renderer: %s", sdl.GetError())
 	}
 	defer sdl.DestroyRenderer(renderer)
-	sdl.SetRenderLogicalPresentation(renderer, int32(rc.W), int32(rc.H), sdl.LogicalPresentationLetterbox)
 
-	texture := sdl.CreateTexture(renderer, sdl.PixelFormatARGB8888, sdl.TextureAccessStreaming, int32(rc.W), int32(rc.H))
+	texW, texH := int32(rc.W), int32(rc.H)
+	texture := sdl.CreateTexture(renderer, sdl.PixelFormatARGB8888, sdl.TextureAccessStreaming, texW, texH)
 	if texture == nil {
 		return fmt.Errorf("texture: %s", sdl.GetError())
 	}
@@ -229,14 +229,61 @@ func runSession(cfg *launchConfig) error {
 	if err := rc.requestUpdate(false); err != nil { // erstes Vollbild
 		return err
 	}
-	log.Printf("tastatur-grab aktiv – zum Beenden Fenster schließen")
+	log.Printf("verbunden – Bedienleiste oben, Tastatur-Grab aktiv")
 
+	tb := newToolbar()
+	tb.layout()
 	v := &viewer{rc: rc}
+	fullscreen, locked, uiDirty := false, false, false
+	quality := byte(1)
+	qName := []string{"N", "M", "H"}
+	hoverID, lastHover := "", "?"
+
+	doAction := func(id string) {
+		uiDirty = true
+		switch id {
+		case "sas":
+			_ = rc.controlSAS()
+		case "win":
+			_ = rc.keyEvent(true, 0xffeb)
+			_ = rc.keyEvent(false, 0xffeb)
+		case "alttab":
+			_ = rc.keyEvent(true, 0xffe9)
+			_ = rc.keyEvent(true, 0xff09)
+			_ = rc.keyEvent(false, 0xff09)
+			_ = rc.keyEvent(false, 0xffe9)
+		case "esc":
+			_ = rc.keyEvent(true, 0xff1b)
+			_ = rc.keyEvent(false, 0xff1b)
+		case "lock":
+			locked = !locked
+			_ = rc.controlBlock(locked)
+			if locked {
+				tb.setLabel("lock", "Entsperren")
+			} else {
+				tb.setLabel("lock", "Sperren")
+			}
+		case "msg":
+			_ = rc.controlMessage("Fernwartung aktiv - bitte nicht ausschalten.")
+		case "qual":
+			quality = (quality + 1) % 3
+			_ = rc.controlQuality(quality)
+			tb.setLabel("qual", "Qual: "+qName[quality])
+		case "full":
+			fullscreen = !fullscreen
+			sdl.SetWindowFullscreen(window, fullscreen)
+		}
+		tb.layout()
+	}
+
 	running := true
 	var ev sdl.Event
 	for running {
+		var winW, winH int32
+		sdl.GetWindowSize(window, &winW, &winH)
+		dst := remoteDst(float32(winW), float32(winH), float32(texW), float32(texH))
+
 		for sdl.PollEvent(&ev) {
-			sdl.ConvertEventToRenderCoordinates(renderer, &ev) // Maus-Koords → Logikkoords
 			switch ev.Type() {
 			case sdl.EventQuit, sdl.EventWindowCloseRequested:
 				running = false
@@ -247,13 +294,57 @@ func runSession(cfg *launchConfig) error {
 				v.onText(ti.Text())
 			case sdl.EventMouseMotion:
 				m := ev.Motion()
-				v.curMask = int(m.State) & 0x7
-				v.lastX, v.lastY = int(m.X), int(m.Y)
-				_ = rc.pointerEvent(v.curMask, v.lastX, v.lastY)
+				hoverID = tb.hit(m.X, m.Y)
+				if rx, ry, ok := winToRemote(m.X, m.Y, dst, float32(texW), float32(texH)); ok {
+					v.curMask = int(m.State) & 0x7
+					v.lastX, v.lastY = rx, ry
+					_ = rc.pointerEvent(v.curMask, rx, ry)
+				}
 			case sdl.EventMouseButtonDown, sdl.EventMouseButtonUp:
-				v.onMouseButton(&ev)
+				b := ev.Button()
+				down := ev.Type() == sdl.EventMouseButtonDown
+				if b.Y <= barHeight { // Klick auf die Bedienleiste
+					if down && b.Button == uint8(sdl.ButtonLeft) {
+						if id := tb.hit(b.X, b.Y); id == "disc" {
+							running = false
+						} else if id != "" {
+							doAction(id)
+						}
+					}
+					break
+				}
+				rx, ry, ok := winToRemote(b.X, b.Y, dst, float32(texW), float32(texH))
+				if !ok {
+					break
+				}
+				bit := -1
+				switch b.Button {
+				case uint8(sdl.ButtonLeft):
+					bit = 0
+				case uint8(sdl.ButtonMiddle):
+					bit = 1
+				case uint8(sdl.ButtonRight):
+					bit = 2
+				}
+				if bit >= 0 {
+					if down {
+						v.curMask |= 1 << bit
+					} else {
+						v.curMask &^= 1 << bit
+					}
+				}
+				v.lastX, v.lastY = rx, ry
+				_ = rc.pointerEvent(v.curMask, rx, ry)
 			case sdl.EventMouseWheel:
-				v.onWheel(&ev)
+				wh := ev.Wheel()
+				if wh.Y != 0 {
+					bit := 3
+					if wh.Y < 0 {
+						bit = 4
+					}
+					_ = rc.pointerEvent(v.curMask|1<<bit, v.lastX, v.lastY)
+					_ = rc.pointerEvent(v.curMask, v.lastX, v.lastY)
+				}
 			}
 		}
 
@@ -263,7 +354,6 @@ func runSession(cfg *launchConfig) error {
 			select {
 			case up := <-updates:
 				if up.resize {
-					// Auflösungswechsel am Gerät: Textur + Logikgröße neu anlegen.
 					sdl.DestroyTexture(texture)
 					texture = sdl.CreateTexture(renderer, sdl.PixelFormatARGB8888, sdl.TextureAccessStreaming, int32(up.w), int32(up.h))
 					if texture == nil {
@@ -272,15 +362,13 @@ func runSession(cfg *launchConfig) error {
 						break drain
 					}
 					sdl.SetTextureBlendMode(texture, sdl.BlendModeNone)
-					sdl.SetRenderLogicalPresentation(renderer, int32(up.w), int32(up.h), sdl.LogicalPresentationLetterbox)
+					texW, texH = int32(up.w), int32(up.h)
 					log.Printf("auflösung geändert: %dx%d", up.w, up.h)
 				} else {
 					applyRect(texture, up)
 				}
 				painted = true
 			case <-cut:
-				// Zwischenablage Gerät→Viewer: purego-SDL3 bindet SetClipboardText
-				// derzeit nicht; bewusst verworfen.
 			case err := <-done:
 				if err != nil {
 					log.Printf("verbindung beendet: %v", err)
@@ -291,14 +379,42 @@ func runSession(cfg *launchConfig) error {
 				break drain
 			}
 		}
-		if painted {
+
+		if painted || uiDirty || hoverID != lastHover {
+			lastHover, uiDirty = hoverID, false
+			sdl.SetRenderDrawColor(renderer, 0x0b, 0x0e, 0x14, 0xff)
 			sdl.RenderClear(renderer)
-			sdl.RenderTexture(renderer, texture, nil, nil)
+			sdl.RenderTexture(renderer, texture, nil, &dst)
+			tb.draw(renderer, float32(winW), hoverID)
 			sdl.RenderPresent(renderer)
 		}
-		time.Sleep(3 * time.Millisecond)
+		time.Sleep(6 * time.Millisecond)
 	}
 	return nil
+}
+
+// remoteDst berechnet das Zielrechteck für das Remote-Bild unterhalb der Leiste
+// (Seitenverhältnis bleibt, zentriert/letterboxed).
+func remoteDst(winW, winH, texW, texH float32) sdl.FRect {
+	availH := winH - barHeight
+	if availH < 1 {
+		availH = 1
+	}
+	scale := winW / texW
+	if s := availH / texH; s < scale {
+		scale = s
+	}
+	dw, dh := texW*scale, texH*scale
+	return sdl.FRect{X: (winW - dw) / 2, Y: barHeight + (availH-dh)/2, W: dw, H: dh}
+}
+
+// winToRemote rechnet eine Fensterposition in Framebuffer-Koordinaten um (false,
+// wenn außerhalb des Remote-Bilds bzw. in der Leiste).
+func winToRemote(mx, my float32, dst sdl.FRect, texW, texH float32) (int, int, bool) {
+	if my <= barHeight || mx < dst.X || mx >= dst.X+dst.W || my < dst.Y || my >= dst.Y+dst.H {
+		return 0, 0, false
+	}
+	return int((mx - dst.X) / dst.W * texW), int((my - dst.Y) / dst.H * texH), true
 }
 
 // viewer hält den Eingabe-Zustand (Maustasten-Maske, letzte Position).
@@ -340,41 +456,6 @@ func (v *viewer) onText(text string) {
 		_ = v.rc.keyEvent(true, ks)
 		_ = v.rc.keyEvent(false, ks)
 	}
-}
-
-func (v *viewer) onMouseButton(ev *sdl.Event) {
-	b := ev.Button()
-	bit := -1
-	switch b.Button {
-	case uint8(sdl.ButtonLeft):
-		bit = 0
-	case uint8(sdl.ButtonMiddle):
-		bit = 1
-	case uint8(sdl.ButtonRight):
-		bit = 2
-	}
-	if bit >= 0 {
-		if b.Down {
-			v.curMask |= 1 << bit
-		} else {
-			v.curMask &^= 1 << bit
-		}
-	}
-	v.lastX, v.lastY = int(b.X), int(b.Y)
-	_ = v.rc.pointerEvent(v.curMask, v.lastX, v.lastY)
-}
-
-func (v *viewer) onWheel(ev *sdl.Event) {
-	wh := ev.Wheel()
-	if wh.Y == 0 {
-		return
-	}
-	bit := 3 // hoch
-	if wh.Y < 0 {
-		bit = 4 // runter
-	}
-	_ = v.rc.pointerEvent(v.curMask|1<<bit, v.lastX, v.lastY)
-	_ = v.rc.pointerEvent(v.curMask, v.lastX, v.lastY)
 }
 
 // applyRect lädt ein dekodiertes Rechteck in die Textur (BGRX == ARGB8888 im Speicher).

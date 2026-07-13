@@ -131,6 +131,12 @@ func RunCaptureHelper(monitor int) {
 			if in, ok := src.(inputSink); ok {
 				in.Key(arg[0] != 0, binary.LittleEndian.Uint32(arg[1:]))
 			}
+		case cmdBlockInput: // on/off(1) – in der Sitzung ausführen
+			bi := make([]byte, 1)
+			if _, err := io.ReadFull(os.Stdin, bi); err != nil {
+				return
+			}
+			blockInput(bi[0] != 0)
 		case cmdSetClipboard: // len(4 LE) + Text (UTF-8)
 			l := make([]byte, 4)
 			if _, err := io.ReadFull(os.Stdin, l); err != nil {
@@ -172,6 +178,7 @@ const (
 	cmdKey          = 3
 	cmdGetClipboard = 4
 	cmdSetClipboard = 5
+	cmdBlockInput   = 6
 )
 
 type helperSource struct {
@@ -307,6 +314,15 @@ func (h *helperSource) Key(down bool, keysym uint32) {
 	}
 	binary.LittleEndian.PutUint32(b[2:], keysym)
 	_, _ = h.stdinW.Write(b)
+}
+
+// BlockInput weist den Helfer an, lokale Eingaben in der Sitzung zu (ent)sperren.
+func (h *helperSource) BlockInput(on bool) {
+	b := byte(0)
+	if on {
+		b = 1
+	}
+	_, _ = h.stdinW.Write([]byte{cmdBlockInput, b})
 }
 
 func (h *helperSource) SetClipboard(text string) {

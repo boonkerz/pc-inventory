@@ -136,6 +136,36 @@ func (c *rfbClient) keyEvent(down bool, keysym uint32) error {
 	return c.write([]byte{4, d, 0, 0, byte(keysym >> 24), byte(keysym >> 16), byte(keysym >> 8), byte(keysym)})
 }
 
+// PC-Inventory-Steuerkanal: eigener RFB-Client->Server-Nachrichtentyp 250 mit
+// Subcommands (der Agent-RFB-Server behandelt sie; noVNC nutzt sie nicht).
+const (
+	ctrlMsgType = 250
+	ctrlSAS     = 1 // Strg+Alt+Entf (echte Secure Attention Sequence)
+	ctrlBlock   = 2 // Eingaben am Gerät sperren (1=an,0=aus)
+	ctrlMessage = 3 // Meldung am Gerät anzeigen (4-Byte-Länge + UTF-8)
+	ctrlQuality = 4 // Qualitätsstufe (0=niedrig,1=mittel,2=hoch)
+)
+
+func (c *rfbClient) controlSAS() error { return c.write([]byte{ctrlMsgType, ctrlSAS}) }
+
+func (c *rfbClient) controlBlock(on bool) error {
+	b := byte(0)
+	if on {
+		b = 1
+	}
+	return c.write([]byte{ctrlMsgType, ctrlBlock, b})
+}
+
+func (c *rfbClient) controlMessage(text string) error {
+	bt := []byte(text)
+	msg := []byte{ctrlMsgType, ctrlMessage, byte(len(bt) >> 24), byte(len(bt) >> 16), byte(len(bt) >> 8), byte(len(bt))}
+	return c.write(append(msg, bt...))
+}
+
+func (c *rfbClient) controlQuality(level byte) error {
+	return c.write([]byte{ctrlMsgType, ctrlQuality, level})
+}
+
 func (c *rfbClient) pointerEvent(mask, x, y int) error {
 	if x < 0 {
 		x = 0

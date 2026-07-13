@@ -78,6 +78,12 @@ func (r *resilientSource) SetClipboard(text string) {
 	}
 }
 
+func (r *resilientSource) BlockInput(on bool) {
+	if ib, ok := r.inner.(inputBlocker); ok {
+		ib.BlockInput(on)
+	}
+}
+
 func (r *resilientSource) Close() error {
 	if r.inner != nil {
 		return r.inner.Close()

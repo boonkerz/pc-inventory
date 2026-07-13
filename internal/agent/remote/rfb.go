@@ -37,6 +37,12 @@ type inputSink interface {
 	Key(down bool, keysym uint32)
 }
 
+// inputBlocker sperrt/entsperrt lokale Maus/Tastatur am Gerät (Support-Sitzung).
+// Muss in der Nutzer-Sitzung ausgeführt werden (Helfer bzw. interaktiver Agent).
+type inputBlocker interface {
+	BlockInput(on bool)
+}
+
 // clipboardSource synchronisiert die Zwischenablage. GetClipboard liefert den Text
 // nur, wenn er sich seit dem letzten Aufruf geändert hat.
 type clipboardSource interface {
@@ -113,6 +119,7 @@ func rfbServe(ctx context.Context, conn io.ReadWriter, src screenSource, log *sl
 	var lastFrame, lastClipPoll time.Time
 	tight := false // Client unterstützt Tight-Encoding (7)?
 	fctx := &frameCtx{}
+	qualityLevel := 1 // 0=niedrig,1=mittel(adaptiv),2=hoch – via Steuerkanal (Typ 250)
 	hdr := make([]byte, 1)
 	for {
 		if ctx.Err() != nil {
@@ -162,7 +169,7 @@ func rfbServe(ctx context.Context, conn io.ReadWriter, src screenSource, log *sl
 					return err
 				}
 			}
-			if err := fctx.send(conn, src, w, h, incremental, tight); err != nil {
+			if err := fctx.send(conn, src, w, h, incremental, tight, qualityLevel); err != nil {
 				return err
 			}
 			// Zwischenablage Gerät → Browser (gedrosselt pollen).
@@ -206,6 +213,49 @@ func rfbServe(ctx context.Context, conn io.ReadWriter, src screenSource, log *sl
 			if cs, ok := src.(clipboardSource); ok && n > 0 {
 				cs.SetClipboard(latin1Decode(text))
 			}
+		case 250: // PC-Inventory-Steuerkanal: sub(1) + ggf. Nutzdaten
+			sub := make([]byte, 1)
+			if _, err := io.ReadFull(conn, sub); err != nil {
+				return err
+			}
+			switch sub[0] {
+			case 1: // Strg+Alt+Entf (echte Secure Attention Sequence)
+				agentSendSAS(log)
+			case 2: // Eingaben am Gerät sperren: 1 Byte on/off
+				b := make([]byte, 1)
+				if _, err := io.ReadFull(conn, b); err != nil {
+					return err
+				}
+				if ib, ok := src.(inputBlocker); ok {
+					ib.BlockInput(b[0] != 0)
+				}
+			case 3: // Meldung anzeigen: 4-Byte-Länge + UTF-8-Text
+				lb := make([]byte, 4)
+				if _, err := io.ReadFull(conn, lb); err != nil {
+					return err
+				}
+				n := int(binary.BigEndian.Uint32(lb))
+				if n < 0 || n > 4096 {
+					return fmt.Errorf("meldung zu lang: %d", n)
+				}
+				txt := make([]byte, n)
+				if _, err := io.ReadFull(conn, txt); err != nil {
+					return err
+				}
+				agentShowMessage(log, string(txt))
+			case 4: // Qualitätsstufe: 1 Byte (0/1/2)
+				b := make([]byte, 1)
+				if _, err := io.ReadFull(conn, b); err != nil {
+					return err
+				}
+				qualityLevel = int(b[0])
+				if qualityLevel > 2 {
+					qualityLevel = 2
+				}
+				fctx = &frameCtx{} // Neuaufbau, damit die neue Qualität sofort greift
+			default:
+				return fmt.Errorf("unbekannter Steuerbefehl %d", sub[0])
+			}
 		default:
 			return fmt.Errorf("unbekannte RFB-Nachricht %d", hdr[0])
 		}
@@ -229,7 +279,7 @@ type frameCtx struct {
 // send überträgt einen Update: geänderten Bereich (Dirty-Rect) als Raw (klein) oder
 // Tight-JPEG (groß, adaptive Qualität). Ohne Änderung ggf. verlustfreier Refresh
 // des zuletzt als JPEG gesendeten Bereichs (Text wird nach Bewegung wieder scharf).
-func (st *frameCtx) send(conn io.Writer, src screenSource, w, h int, incremental, tight bool) error {
+func (st *frameCtx) send(conn io.Writer, src screenSource, w, h int, incremental, tight bool, qualityLevel int) error {
 	cur, err := src.Capture()
 	if err != nil || len(cur) != w*h*4 {
 		// Fehler oder Größen-Mismatch (Auflösung gerade gewechselt) -> leeres Update;
@@ -267,6 +317,19 @@ func (st *frameCtx) send(conn io.Writer, src screenSource, w, h int, incremental
 		case frac > w*h/6:
 			quality = 65
 		}
+	}
+	// Manuelle Qualitätsstufe (Client-Steuerkanal): 0=niedrig (Bandbreite sparen),
+	// 2=hoch (schärfer). 1=mittel lässt die adaptive Automatik unverändert.
+	switch qualityLevel {
+	case 0:
+		if quality > 40 {
+			quality = 40
+		}
+		if tight && rw*rh >= 32*32 { // aggressiver JPEG für weniger Bandbreite
+			useJPEG = true
+		}
+	case 2:
+		quality = 92
 	}
 	if err := st.writeRect(conn, cur, x0, y0, x1, y1, w, useJPEG, quality); err != nil {
 		return err
