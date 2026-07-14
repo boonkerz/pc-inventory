@@ -17,14 +17,14 @@ import (
 
 	"github.com/kardianos/service"
 
-	"github.com/thomaspeterson/pc-inventory/internal/server/api"
-	"github.com/thomaspeterson/pc-inventory/internal/server/auth"
-	"github.com/thomaspeterson/pc-inventory/internal/server/config"
-	"github.com/thomaspeterson/pc-inventory/internal/server/cve"
-	"github.com/thomaspeterson/pc-inventory/internal/server/model"
-	"github.com/thomaspeterson/pc-inventory/internal/server/selfsign"
-	"github.com/thomaspeterson/pc-inventory/internal/server/store"
-	"github.com/thomaspeterson/pc-inventory/web"
+	"github.com/boonkerz/roster/internal/server/api"
+	"github.com/boonkerz/roster/internal/server/auth"
+	"github.com/boonkerz/roster/internal/server/config"
+	"github.com/boonkerz/roster/internal/server/cve"
+	"github.com/boonkerz/roster/internal/server/model"
+	"github.com/boonkerz/roster/internal/server/selfsign"
+	"github.com/boonkerz/roster/internal/server/store"
+	"github.com/boonkerz/roster/web"
 )
 
 // version wird beim Build via -ldflags gesetzt und entspricht der Version der
@@ -54,8 +54,8 @@ func main() {
 
 	prg := &program{configPath: *configPath, log: log}
 	svcConfig := &service.Config{
-		Name:        "pc-inventory-server",
-		DisplayName: "PC-Inventory Server",
+		Name:        "roster-server",
+		DisplayName: "Roster Server",
 		Description: "Zentraler Server für das PC-/Server-Inventar.",
 		Arguments:   serviceArgs(*configPath),
 	}

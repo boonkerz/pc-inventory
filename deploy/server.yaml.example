@@ -1,17 +1,17 @@
-# Beispiel-Konfiguration für den PC-Inventory-Server.
-# Pfad beim Start angeben: server -config /etc/pc-inventory/server.yaml run
-# Alle Werte sind auch per ENV überschreibbar (PCINV_ADDR, PCINV_DB, ...).
+# Beispiel-Konfiguration für den Roster-Server.
+# Pfad beim Start angeben: server -config /etc/roster/server.yaml run
+# Alle Werte sind auch per ENV überschreibbar (ROSTER_ADDR, ROSTER_DB, ...).
 
 # Listen-Adresse.
 addr: ":8443"
 
 # Datenbank: SQLite für kleine Umgebungen ODER PostgreSQL für große.
-database_url: "sqlite:///var/lib/pc-inventory/inventory.db"
+database_url: "sqlite:///var/lib/roster/inventory.db"
 # database_url: "postgres://inventory:passwort@db-host:5432/inventory?sslmode=require"
 
 # TLS – in Produktion zwingend setzen (sonst läuft der Server als reines HTTP).
-tls_cert: "/etc/pc-inventory/server.crt"
-tls_key: "/etc/pc-inventory/server.key"
+tls_cert: "/etc/roster/server.crt"
+tls_key: "/etc/roster/server.key"
 # Entwicklung ohne echtes Zertifikat: selbstsigniertes erzeugen, falls die Dateien
 # oben fehlen. Der Agent pinnt cert.pem dann via ca_cert_path (insecure_skip_verify=false).
 # tls_self_signed: true

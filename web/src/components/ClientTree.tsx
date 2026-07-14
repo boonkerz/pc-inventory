@@ -32,13 +32,13 @@ export function ClientTree({ tree, total, selected, onSelect, isAdmin }: Props) 
   // Aufgeklappte Clients über Navigation hinweg merken.
   const [expanded, setExpanded] = useState<Set<string>>(() => {
     try {
-      const s = sessionStorage.getItem("pcinv-tree-expanded");
+      const s = sessionStorage.getItem("roster-tree-expanded");
       if (s) return new Set(JSON.parse(s) as string[]);
     } catch { /* ignore */ }
     return new Set();
   });
   useEffect(() => {
-    sessionStorage.setItem("pcinv-tree-expanded", JSON.stringify([...expanded]));
+    sessionStorage.setItem("roster-tree-expanded", JSON.stringify([...expanded]));
   }, [expanded]);
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["clients"] });

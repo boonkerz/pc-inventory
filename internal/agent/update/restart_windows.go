@@ -8,7 +8,7 @@ import (
 )
 
 // serviceName muss zum Dienstnamen in cmd/agent passen.
-const serviceName = "pc-inventory-agent"
+const serviceName = "roster-agent"
 
 // restart startet einen losgelösten Helfer, der nach kurzer Wartezeit den Dienst
 // neu startet – dadurch lädt der Service Control Manager das neue Binary.

@@ -1,4 +1,4 @@
-# PC-Inventory – Feature-Liste / Roadmap
+# Roster – Feature-Liste / Roadmap
 
 Stand: laufend gepflegt. Die ursprüngliche Roadmap ist **komplett umgesetzt**
 (siehe „Erledigt" weiter unten). Der folgende **Ideenpool** sammelt mögliche

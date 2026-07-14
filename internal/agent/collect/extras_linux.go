@@ -6,7 +6,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/thomaspeterson/pc-inventory/internal/shared"
+	"github.com/boonkerz/roster/internal/shared"
 )
 
 func osExtras(ctx context.Context) ([]shared.SoftwarePackage, []shared.Printer, []string) {

@@ -6,7 +6,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/thomaspeterson/pc-inventory/internal/shared"
+	"github.com/boonkerz/roster/internal/shared"
 )
 
 // osUpdateList wertet `softwareupdate -l` aus (Anzahl/Namen verfügbarer Updates).

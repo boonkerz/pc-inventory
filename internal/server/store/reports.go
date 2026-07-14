@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/thomaspeterson/pc-inventory/internal/server/model"
+	"github.com/boonkerz/roster/internal/server/model"
 )
 
 // CreateReportSchedule legt einen geplanten Bericht an.

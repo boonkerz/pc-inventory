@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/thomaspeterson/pc-inventory/internal/server/alert"
-	"github.com/thomaspeterson/pc-inventory/internal/server/auth"
-	"github.com/thomaspeterson/pc-inventory/internal/server/model"
-	"github.com/thomaspeterson/pc-inventory/internal/server/store"
-	"github.com/thomaspeterson/pc-inventory/internal/shared"
+	"github.com/boonkerz/roster/internal/server/alert"
+	"github.com/boonkerz/roster/internal/server/auth"
+	"github.com/boonkerz/roster/internal/server/model"
+	"github.com/boonkerz/roster/internal/server/store"
+	"github.com/boonkerz/roster/internal/shared"
 )
 
 // handleEnroll tauscht ein gültiges Enrollment-Token gegen ein eindeutiges Agent-Token.
@@ -265,7 +265,7 @@ func (s *Server) alertSoftwareChanges(ctx context.Context, device *model.Device,
 		return
 	}
 	label := map[string]string{"added": "installiert", "removed": "entfernt", "updated": "aktualisiert"}
-	subject := fmt.Sprintf("[PC-Inventar] Software-Änderung auf %s", device.Hostname)
+	subject := fmt.Sprintf("[Roster] Software-Änderung auf %s", device.Hostname)
 	for _, ch := range channels {
 		if severityRank("warning") < severityRank(ch.MinSeverity) {
 			continue // Kanal will nur kritische Meldungen
@@ -316,7 +316,7 @@ func (s *Server) alertTransitions(ctx context.Context, device *model.Device, eve
 	}
 	severities, _ := s.store.CheckSeverities(ctx, ids)
 
-	subject := fmt.Sprintf("[PC-Inventar] Check-Meldung auf %s", device.Hostname)
+	subject := fmt.Sprintf("[Roster] Check-Meldung auf %s", device.Hostname)
 	notifiedIDs := map[string]bool{}
 	for _, ch := range channels {
 		minRank := severityRank(ch.MinSeverity)

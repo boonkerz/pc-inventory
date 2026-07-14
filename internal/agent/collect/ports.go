@@ -9,7 +9,7 @@ import (
 	psnet "github.com/shirou/gopsutil/v4/net"
 	"github.com/shirou/gopsutil/v4/process"
 
-	"github.com/thomaspeterson/pc-inventory/internal/shared"
+	"github.com/boonkerz/roster/internal/shared"
 )
 
 // ListenPorts liefert die lauschenden Sockets des Geräts (die lokale Angriffsfläche).

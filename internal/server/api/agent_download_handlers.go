@@ -7,8 +7,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/thomaspeterson/pc-inventory/internal/server/agentdist"
-	"github.com/thomaspeterson/pc-inventory/internal/server/viewerdist"
+	"github.com/boonkerz/roster/internal/server/agentdist"
+	"github.com/boonkerz/roster/internal/server/viewerdist"
 )
 
 // handleAgentList liefert die verfügbaren Agent-Plattformen (für den "Neuer Computer"-Dialog).
@@ -30,7 +30,7 @@ func (s *Server) handleAgentDownload(w http.ResponseWriter, r *http.Request) {
 	http.ServeContent(w, r, filename, time.Time{}, bytes.NewReader(data))
 }
 
-// handleViewerDownload streamt das native Fernsteuerungs-Viewer-Binary (pcinv-viewer)
+// handleViewerDownload streamt das native Fernsteuerungs-Viewer-Binary (roster-viewer)
 // einer Plattform. Enthält keine Geheimnisse (die Berechtigung steckt im pro-Sitzung
 // erzeugten Startcode), daher wie der Agent öffentlich ladbar.
 func (s *Server) handleViewerDownload(w http.ResponseWriter, r *http.Request) {

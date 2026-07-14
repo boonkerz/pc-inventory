@@ -48,10 +48,10 @@ func Load(configPath string) (Config, error) {
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return cfg, fmt.Errorf("agent-konfig parsen: %w", err)
 	}
-	if v := os.Getenv("PCINV_SERVER_URL"); v != "" {
+	if v := os.Getenv("ROSTER_SERVER_URL"); v != "" {
 		cfg.ServerURL = v
 	}
-	if v := os.Getenv("PCINV_ENROLLMENT_TOKEN"); v != "" {
+	if v := os.Getenv("ROSTER_ENROLLMENT_TOKEN"); v != "" {
 		cfg.EnrollmentToken = v
 	}
 	if cfg.ServerURL == "" {

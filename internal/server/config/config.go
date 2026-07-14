@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -92,54 +93,71 @@ func Load(configPath string) (Config, error) {
 	return cfg, nil
 }
 
+// migrateLegacyEnv übernimmt gesetzte PCINV_*-Variablen (alter Name „PC-Inventory")
+// in die neuen ROSTER_*-Namen, sofern die neue Variante nicht gesetzt ist. So läuft
+// eine bestehende Installation nach dem Rebranding ohne Anpassung weiter.
+func migrateLegacyEnv() {
+	for _, e := range os.Environ() {
+		i := strings.IndexByte(e, '=')
+		if i < 0 || !strings.HasPrefix(e[:i], "PCINV_") {
+			continue
+		}
+		newKey := "ROSTER_" + strings.TrimPrefix(e[:i], "PCINV_")
+		if os.Getenv(newKey) == "" {
+			_ = os.Setenv(newKey, e[i+1:])
+		}
+	}
+}
+
 func applyEnv(cfg *Config) {
-	if v := os.Getenv("PCINV_ADDR"); v != "" {
+	migrateLegacyEnv() // Rückwärtskompatibilität: alte PCINV_*-Variablen weiter akzeptieren
+	if v := os.Getenv("ROSTER_ADDR"); v != "" {
 		cfg.Addr = v
 	}
-	if v := os.Getenv("PCINV_DB"); v != "" {
+	if v := os.Getenv("ROSTER_DB"); v != "" {
 		cfg.DatabaseURL = v
 	}
-	if v := os.Getenv("PCINV_TLS_CERT"); v != "" {
+	if v := os.Getenv("ROSTER_TLS_CERT"); v != "" {
 		cfg.TLSCert = v
 	}
-	if v := os.Getenv("PCINV_TLS_KEY"); v != "" {
+	if v := os.Getenv("ROSTER_TLS_KEY"); v != "" {
 		cfg.TLSKey = v
 	}
-	if v := os.Getenv("PCINV_TLS_SELFSIGNED"); v != "" {
+	if v := os.Getenv("ROSTER_TLS_SELFSIGNED"); v != "" {
 		cfg.TLSSelfSigned = v == "true" || v == "1"
 	}
-	if v := os.Getenv("PCINV_TLS_HOSTS"); v != "" {
+	if v := os.Getenv("ROSTER_TLS_HOSTS"); v != "" {
 		cfg.TLSHosts = v
 	}
-	if v := os.Getenv("PCINV_SEED_ADMIN_USER"); v != "" {
+	if v := os.Getenv("ROSTER_SEED_ADMIN_USER"); v != "" {
 		cfg.SeedAdminUser = v
 	}
-	if v := os.Getenv("PCINV_SEED_ADMIN_PASSWORD"); v != "" {
+	if v := os.Getenv("ROSTER_SEED_ADMIN_PASSWORD"); v != "" {
 		cfg.SeedAdminPassword = v
 	}
-	if v := os.Getenv("PCINV_SEED_ENROLL_TOKEN"); v != "" {
+	if v := os.Getenv("ROSTER_SEED_ENROLL_TOKEN"); v != "" {
 		cfg.SeedEnrollToken = v
 	}
-	if v := os.Getenv("PCINV_CHECKIN_INTERVAL"); v != "" {
+	if v := os.Getenv("ROSTER_CHECKIN_INTERVAL"); v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
 			cfg.CheckinInterval = d
 		}
 	}
-	if v := os.Getenv("PCINV_REQUIRE_2FA"); v != "" {
+	if v := os.Getenv("ROSTER_REQUIRE_2FA"); v != "" {
 		cfg.Require2FA = v == "true" || v == "1"
 	}
-	if v := os.Getenv("PCINV_BEHIND_PROXY"); v != "" {
+	if v := os.Getenv("ROSTER_BEHIND_PROXY"); v != "" {
 		cfg.BehindProxy = v == "true" || v == "1"
 	}
-	if v := os.Getenv("PCINV_EXTERNAL_URL"); v != "" {
+	if v := os.Getenv("ROSTER_EXTERNAL_URL"); v != "" {
 		cfg.ExternalURL = v
 	}
-	if v := os.Getenv("PCINV_SECURE_COOKIE"); v != "" {
+	if v := os.Getenv("ROSTER_SECURE_COOKIE"); v != "" {
 		if b, err := strconv.ParseBool(v); err == nil {
 			cfg.SecureCookie = b
 		}
 	}
-	if v := os.Getenv("PCINV_RESULT_RETENTION_DAYS"); v != "" {
+	if v := os.Getenv("ROSTER_RESULT_RETENTION_DAYS"); v != "" {
 		if d, err := strconv.Atoi(v); err == nil && d >= 0 {
 			cfg.ResultRetention = time.Duration(d) * 24 * time.Hour
 		}

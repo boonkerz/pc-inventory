@@ -109,7 +109,7 @@ func rfbServe(ctx context.Context, conn io.ReadWriter, src screenSource, log *sl
 	si = be16(si, w)
 	si = be16(si, h)
 	si = append(si, rfbPixelFormat()...)
-	name := []byte("PC-Inventory")
+	name := []byte("Roster")
 	si = be32(si, len(name))
 	si = append(si, name...)
 	if _, err := conn.Write(si); err != nil {
@@ -213,7 +213,7 @@ func rfbServe(ctx context.Context, conn io.ReadWriter, src screenSource, log *sl
 			if cs, ok := src.(clipboardSource); ok && n > 0 {
 				cs.SetClipboard(latin1Decode(text))
 			}
-		case 250: // PC-Inventory-Steuerkanal: sub(1) + ggf. Nutzdaten
+		case 250: // Roster-Steuerkanal: sub(1) + ggf. Nutzdaten
 			sub := make([]byte, 1)
 			if _, err := io.ReadFull(conn, sub); err != nil {
 				return err

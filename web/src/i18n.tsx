@@ -18,7 +18,7 @@ function translate(lang: Lang, key: string, vars?: Vars): string {
 }
 
 // Modul-globale Sprache – für reine Funktionen (z.B. relTime), die keinen Hook nutzen.
-let currentLang: Lang = (typeof localStorage !== "undefined" && (localStorage.getItem("pcinv-lang") as Lang)) || "de";
+let currentLang: Lang = (typeof localStorage !== "undefined" && (localStorage.getItem("roster-lang") as Lang)) || "de";
 export function gt(key: string, vars?: Vars): string {
   return translate(currentLang, key, vars);
 }
@@ -32,9 +32,9 @@ interface I18nCtx {
 const Ctx = createContext<I18nCtx>({ lang: "de", setLang: () => {}, t: (k) => k });
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>(() => (localStorage.getItem("pcinv-lang") as Lang) || "de");
+  const [lang, setLangState] = useState<Lang>(() => (localStorage.getItem("roster-lang") as Lang) || "de");
   const setLang = useCallback((l: Lang) => {
-    localStorage.setItem("pcinv-lang", l);
+    localStorage.setItem("roster-lang", l);
     currentLang = l;
     setLangState(l);
     document.documentElement.lang = l;

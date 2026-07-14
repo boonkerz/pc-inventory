@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/thomaspeterson/pc-inventory/internal/shared"
+	"github.com/boonkerz/roster/internal/shared"
 )
 
 func hwExtras(ctx context.Context) ([]string, []shared.PhysicalDisk) {

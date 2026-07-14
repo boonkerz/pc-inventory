@@ -38,9 +38,9 @@ disable_auto_update: true
 YML
 
 echo "→ starting demo server + agent…"
-PCINV_DB="sqlite://$DD/demo.db" PCINV_ADDR="127.0.0.1:$PORT" \
-  PCINV_SEED_ADMIN_USER=admin PCINV_SEED_ADMIN_PASSWORD=demo1234 \
-  PCINV_REQUIRE_2FA=false PCINV_SEED_ENROLL_TOKEN=demotoken PCINV_CHECKIN_INTERVAL=5s \
+ROSTER_DB="sqlite://$DD/demo.db" ROSTER_ADDR="127.0.0.1:$PORT" \
+  ROSTER_SEED_ADMIN_USER=admin ROSTER_SEED_ADMIN_PASSWORD=demo1234 \
+  ROSTER_REQUIRE_2FA=false ROSTER_SEED_ENROLL_TOKEN=demotoken ROSTER_CHECKIN_INTERVAL=5s \
   "$DD/server" run &
 sleep 3
 "$DD/agent" -config "$DD/agent.yaml" run &

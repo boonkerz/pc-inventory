@@ -7,9 +7,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/thomaspeterson/pc-inventory/internal/server/alert"
-	"github.com/thomaspeterson/pc-inventory/internal/server/model"
-	"github.com/thomaspeterson/pc-inventory/internal/server/report"
+	"github.com/boonkerz/roster/internal/server/alert"
+	"github.com/boonkerz/roster/internal/server/model"
+	"github.com/boonkerz/roster/internal/server/report"
 )
 
 // buildHealthReport erzeugt den Health-Bericht über alle Geräte (mit Status).
@@ -104,7 +104,7 @@ func (s *Server) RunReportLoop(ctx context.Context) {
 			}
 			rep := report.Build(rs.Title, devices)
 			alert.Dispatch(s.log, ch, alert.Notification{
-				Subject: "[PC-Inventar] " + rs.Title,
+				Subject: "[Roster] " + rs.Title,
 				Body:    rep.Text(),
 			})
 			_ = s.store.MarkReportRun(ctx, rs.ID, now)

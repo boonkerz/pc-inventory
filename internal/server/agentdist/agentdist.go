@@ -26,10 +26,10 @@ var files = map[string]string{
 
 // downloadName ist der Dateiname, unter dem der Client speichert.
 var downloadName = map[string]string{
-	"linux-amd64":   "pc-inventory-agent",
-	"linux-arm64":   "pc-inventory-agent",
-	"darwin-amd64":  "pc-inventory-agent",
-	"darwin-arm64":  "pc-inventory-agent",
+	"linux-amd64":   "roster-agent",
+	"linux-arm64":   "roster-agent",
+	"darwin-amd64":  "roster-agent",
+	"darwin-arm64":  "roster-agent",
 	"windows-amd64": "agent.exe",
 }
 

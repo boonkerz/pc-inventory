@@ -11,8 +11,8 @@ import (
 	"github.com/coder/websocket"
 	"github.com/go-chi/chi/v5"
 
-	"github.com/thomaspeterson/pc-inventory/internal/server/model"
-	"github.com/thomaspeterson/pc-inventory/internal/shared"
+	"github.com/boonkerz/roster/internal/server/model"
+	"github.com/boonkerz/roster/internal/shared"
 )
 
 // Web-Fernsteuerung (Remote Desktop) über denselben On-demand-Tunnel wie das
@@ -44,7 +44,7 @@ func vncPassword() string {
 type remoteStartResponse struct {
 	Session  string `json:"session"`
 	Password string `json:"password"`
-	Token    string `json:"token"` // für den nativen Viewer (pcinv-viewer)
+	Token    string `json:"token"` // für den nativen Viewer (roster-viewer)
 }
 
 // handleRemoteStart erzeugt eine Remote-Desktop-Sitzung und weckt den Agent.
@@ -155,7 +155,7 @@ func (s *Server) handleDeviceVNC(w http.ResponseWriter, r *http.Request) {
 	s.relayRemote(w, r, sessID, sess)
 }
 
-// handleViewerVNC bedient den nativen Viewer (pcinv-viewer). Es gibt kein
+// handleViewerVNC bedient den nativen Viewer (roster-viewer). Es gibt kein
 // Session-Cookie; die Berechtigung wird über das pro-Sitzung erzeugte Viewer-Token
 // nachgewiesen (Bearer-Header oder ?token=), das nur ein Admin via /remote/start
 // erhalten kann.

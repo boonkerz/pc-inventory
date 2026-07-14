@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/thomaspeterson/pc-inventory/internal/server/model"
-	"github.com/thomaspeterson/pc-inventory/internal/server/store"
+	"github.com/boonkerz/roster/internal/server/model"
+	"github.com/boonkerz/roster/internal/server/store"
 )
 
 type bulkRequest struct {

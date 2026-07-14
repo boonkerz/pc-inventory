@@ -31,7 +31,7 @@ RUN CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=$VERSION" -o /server 
 
 # 3) Laufzeit-Image
 FROM alpine:3.20
-RUN apk add --no-cache ca-certificates && mkdir -p /var/lib/pc-inventory
+RUN apk add --no-cache ca-certificates && mkdir -p /var/lib/roster
 COPY --from=build /server /usr/local/bin/server
 EXPOSE 8443
 ENTRYPOINT ["server", "run"]

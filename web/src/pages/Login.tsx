@@ -46,7 +46,7 @@ export function Login() {
       {pending ? (
         <form className="login-card" onSubmit={submitCode}>
           <div className="login-top"><LangSwitch /><ThemeToggle /></div>
-          <div className="brand login-brand"><span className="brand-mark">▣</span> PC-Inventar</div>
+          <div className="brand login-brand"><span className="brand-mark">▣</span> Roster</div>
           <p className="muted small">{t("Bestätigungscode aus deiner Authenticator-App (oder ein Backup-Code).")}</p>
           <label>
             {t("Code")}
@@ -60,7 +60,7 @@ export function Login() {
       ) : (
         <form className="login-card" onSubmit={submit}>
           <div className="login-top"><LangSwitch /><ThemeToggle /></div>
-          <div className="brand login-brand"><span className="brand-mark">▣</span> PC-Inventar</div>
+          <div className="brand login-brand"><span className="brand-mark">▣</span> Roster</div>
           <label>
             {t("Benutzername")}
             <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" autoFocus />

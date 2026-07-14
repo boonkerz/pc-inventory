@@ -8,7 +8,7 @@ import (
 	"os/exec"
 )
 
-// registerScheme registriert pcinv-viewer als Handler für pcinv://-Links in der
+// registerScheme registriert roster-viewer als Handler für roster://-Links in der
 // Windows-Registry (HKCU, kein Admin nötig), sodass der Browser-Button „Im Viewer
 // öffnen" den Viewer direkt mit dem Startcode startet.
 func registerScheme() error {
@@ -16,9 +16,9 @@ func registerScheme() error {
 	if err != nil {
 		return err
 	}
-	const root = `HKCU\Software\Classes\pcinv`
+	const root = `HKCU\Software\Classes\roster`
 	cmds := [][]string{
-		{"add", root, "/ve", "/d", "URL:PC-Inventory Fernsteuerung", "/f"},
+		{"add", root, "/ve", "/d", "URL:Roster Fernsteuerung", "/f"},
 		{"add", root, "/v", "URL Protocol", "/d", "", "/f"},
 		{"add", root + `\shell\open\command`, "/ve", "/d", fmt.Sprintf(`"%s" "%%1"`, exe), "/f"},
 	}

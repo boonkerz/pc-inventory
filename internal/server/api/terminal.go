@@ -11,7 +11,7 @@ import (
 	"github.com/coder/websocket"
 	"github.com/go-chi/chi/v5"
 
-	"github.com/thomaspeterson/pc-inventory/internal/shared"
+	"github.com/boonkerz/roster/internal/shared"
 )
 
 // Das Remote-Terminal arbeitet on-demand, ohne Dauerverbindung:

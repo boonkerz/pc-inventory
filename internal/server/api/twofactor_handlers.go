@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/thomaspeterson/pc-inventory/internal/server/auth"
-	"github.com/thomaspeterson/pc-inventory/internal/server/model"
+	"github.com/boonkerz/roster/internal/server/auth"
+	"github.com/boonkerz/roster/internal/server/model"
 )
 
-const issuerName = "PC-Inventory"
+const issuerName = "Roster"
 
 type totpLoginRequest struct {
 	Pending string `json:"pending"`

@@ -1,4 +1,4 @@
-# Test-Stack für PC-Inventory.
+# Test-Stack für Roster.
 #
 #   docker compose -f docker/compose.yml up --build   # startet ALLES inkl. Windows-VM (KVM)
 #
@@ -7,9 +7,9 @@
 #
 # Hinweise:
 # - Der Windows-Service braucht /dev/kvm; der Erststart lädt mehrere GB (Eval-Image).
-# - Der feste PCINV_SEED_ENROLL_TOKEN ist NUR für diese Testumgebung gedacht.
+# - Der feste ROSTER_SEED_ENROLL_TOKEN ist NUR für diese Testumgebung gedacht.
 
-name: pc-inventory-test
+name: roster-test
 
 networks:
   invnet:
@@ -42,21 +42,21 @@ services:
     ports:
       - "8443:8443"
     environment:
-      PCINV_ADDR: ":8443"
-      PCINV_DB: "sqlite:///var/lib/pc-inventory/inventory.db"
-      PCINV_SECURE_COOKIE: "true"
-      PCINV_CHECKIN_INTERVAL: "30s"
-      PCINV_SEED_ADMIN_USER: "admin"
-      PCINV_SEED_ADMIN_PASSWORD: "admin1234"
-      PCINV_SEED_ENROLL_TOKEN: "test-enroll-token"
+      ROSTER_ADDR: ":8443"
+      ROSTER_DB: "sqlite:///var/lib/roster/inventory.db"
+      ROSTER_SECURE_COOKIE: "true"
+      ROSTER_CHECKIN_INTERVAL: "30s"
+      ROSTER_SEED_ADMIN_USER: "admin"
+      ROSTER_SEED_ADMIN_PASSWORD: "admin1234"
+      ROSTER_SEED_ENROLL_TOKEN: "test-enroll-token"
       # TLS für die Entwicklung: selbstsigniertes Zertifikat, das der Server beim
       # ersten Start erzeugt und in den geteilten Ordner schreibt (Agents pinnen es).
-      PCINV_TLS_SELFSIGNED: "true"
-      PCINV_TLS_CERT: "/certs/cert.pem"
-      PCINV_TLS_KEY: "/certs/key.pem"
-      PCINV_TLS_HOSTS: "inventory-host,localhost,127.0.0.1,172.19.0.11"
+      ROSTER_TLS_SELFSIGNED: "true"
+      ROSTER_TLS_CERT: "/certs/cert.pem"
+      ROSTER_TLS_KEY: "/certs/key.pem"
+      ROSTER_TLS_HOSTS: "inventory-host,localhost,127.0.0.1,172.19.0.11"
     volumes:
-      - inventory-data:/var/lib/pc-inventory
+      - inventory-data:/var/lib/roster
       - ./windows/shared:/certs   # cert.pem hier ist auch in der Windows-VM (\\172.30.0.1\Data) sichtbar
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "--no-check-certificate", "https://127.0.0.1:8443/"]
@@ -74,11 +74,11 @@ services:
     hostname: linux-test-pc
     networks: [invnet]
     environment:
-      PCINV_SERVER_URL: "https://inventory-host:8443"
-      PCINV_ENROLLMENT_TOKEN: "test-enroll-token"
-      PCINV_INTERVAL: "30s"
-      PCINV_INSECURE: "false"
-      PCINV_CACERT: "/certs/cert.pem"   # vom Server erzeugtes Zertifikat pinnen
+      ROSTER_SERVER_URL: "https://inventory-host:8443"
+      ROSTER_ENROLLMENT_TOKEN: "test-enroll-token"
+      ROSTER_INTERVAL: "30s"
+      ROSTER_INSECURE: "false"
+      ROSTER_CACERT: "/certs/cert.pem"   # vom Server erzeugtes Zertifikat pinnen
     volumes:
       - ./windows/shared:/certs:ro
     depends_on:

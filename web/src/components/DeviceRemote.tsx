@@ -114,13 +114,13 @@ export function DeviceRemote({ id, os, fill, autoStart, initialMonitor }: {
       "width=1280,height=800,menubar=no,toolbar=no,location=no,status=no");
   };
 
-  // Nativer Viewer (Linux/Wayland): erzeugt einen base64-Startcode für pcinv-viewer.
+  // Nativer Viewer (Linux/Wayland): erzeugt einen base64-Startcode für roster-viewer.
   // Der Viewer greift die Tastatur per shortcuts-inhibit ab – so erreichen auch Win+T,
   // Win+Zahlen, Alt+Tab das Gerät, was der Browser auf Wayland/niri nicht garantiert.
   const [nativeCode, setNativeCode] = useState("");
   const [nativeStatus, setNativeStatus] = useState("");
   const [copied, setCopied] = useState(false);
-  // base64url (url-sicher, passt für pcinv://-Links UND das Copy-Paste-Kommando).
+  // base64url (url-sicher, passt für roster://-Links UND das Copy-Paste-Kommando).
   const b64url = (s: string) => btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   const genCode = async (): Promise<string | null> => {
     setNativeStatus(t("Startcode wird erzeugt…"));
@@ -142,9 +142,9 @@ export function DeviceRemote({ id, os, fill, autoStart, initialMonitor }: {
   const startNative = () => { void genCode(); };
   const openInViewer = async () => {
     const code = await genCode();
-    if (code) window.location.href = `pcinv://${code}`;
+    if (code) window.location.href = `roster://${code}`;
   };
-  const nativeCmd = `pcinv-viewer ${nativeCode}`;
+  const nativeCmd = `roster-viewer ${nativeCode}`;
   const copyNative = () => {
     navigator.clipboard?.writeText(nativeCmd).then(() => { setCopied(true); }).catch(() => {});
   };
@@ -268,26 +268,26 @@ export function DeviceRemote({ id, os, fill, autoStart, initialMonitor }: {
           <div className="remote-native-head">
             <strong>⌨️ {t("Nativer Viewer – volle Tastatur-Erfassung")}</strong>
             <span className="row-gap">
-              <button className="btn primary sm" onClick={openInViewer} title={t("Startet den installierten Viewer direkt (pcinv://). Einmalig: pcinv-viewer --register")}>▶ {t("Im Viewer öffnen")}</button>
+              <button className="btn primary sm" onClick={openInViewer} title={t("Startet den installierten Viewer direkt (roster://). Einmalig: roster-viewer --register")}>▶ {t("Im Viewer öffnen")}</button>
               <button className="btn ghost sm" onClick={startNative}>{t("Startcode erzeugen")}</button>
             </span>
           </div>
-          <p className="muted small">{t("Für Wayland/niri: der native Viewer erfasst alle Tasten (Win+T, Win+Zahlen, Alt+Tab …) und reicht sie ans Gerät durch – der Browser kann das auf Wayland nicht garantieren. Einmalig pcinv-viewer installieren.")}</p>
+          <p className="muted small">{t("Für Wayland/niri: der native Viewer erfasst alle Tasten (Win+T, Win+Zahlen, Alt+Tab …) und reicht sie ans Gerät durch – der Browser kann das auf Wayland nicht garantieren. Einmalig roster-viewer installieren.")}</p>
           <p className="muted small">
             <a href="/api/v1/viewer/linux-amd64" download>⭳ {t("Viewer herunterladen (Linux x86-64)")}</a>
             {" — "}{t("ausführbar machen und in den PATH legen:")}{" "}
-            <code>chmod +x pcinv-viewer &amp;&amp; mv pcinv-viewer ~/.local/bin/</code>
+            <code>chmod +x roster-viewer &amp;&amp; mv roster-viewer ~/.local/bin/</code>
           </p>
           <p className="muted small">
             <a href="/api/v1/viewer/windows-amd64" download>⭳ {t("Viewer herunterladen (Windows x86-64, .zip)")}</a>
             {" — "}{t("entpacken (SDL3.dll enthalten); Handler registrieren:")}{" "}
-            <code>pcinv-viewer.exe --register</code>
+            <code>roster-viewer.exe --register</code>
           </p>
           <p className="muted small">
             <a href="/api/v1/viewer/darwin-arm64" download>⭳ {t("Viewer herunterladen (macOS Apple Silicon, .zip)")}</a>
             {" — "}{t("entpacken (libSDL3.dylib enthalten).")}
           </p>
-          <p className="muted small">{t("Für den „Im Viewer öffnen\"-Button einmalig den Protokoll-Handler registrieren:")} <code>pcinv-viewer --register</code>{". "}{t("Ohne Startcode gestartet, öffnet pcinv-viewer einen Dialog zum Einfügen.")}</p>
+          <p className="muted small">{t("Für den „Im Viewer öffnen\"-Button einmalig den Protokoll-Handler registrieren:")} <code>roster-viewer --register</code>{". "}{t("Ohne Startcode gestartet, öffnet roster-viewer einen Dialog zum Einfügen.")}</p>
           {nativeStatus && <p className="muted small">{nativeStatus}</p>}
           {nativeCode && (
             <div className="remote-native-cmd">

@@ -40,7 +40,7 @@ func EnsureCert(certPath, keyPath string, hosts []string) error {
 	}
 	tmpl := x509.Certificate{
 		SerialNumber:          serial,
-		Subject:               pkix.Name{CommonName: hosts[0], Organization: []string{"PC-Inventory Dev"}},
+		Subject:               pkix.Name{CommonName: hosts[0], Organization: []string{"Roster Dev"}},
 		NotBefore:             time.Now().Add(-1 * time.Hour),
 		NotAfter:              time.Now().AddDate(10, 0, 0),
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,

@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/thomaspeterson/pc-inventory/internal/agent/collect"
-	"github.com/thomaspeterson/pc-inventory/internal/shared"
+	"github.com/boonkerz/roster/internal/agent/collect"
+	"github.com/boonkerz/roster/internal/shared"
 )
 
 // portsCheck vergleicht die öffentlich lauschenden Ports des Geräts gegen eine

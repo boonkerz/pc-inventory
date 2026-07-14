@@ -12,5 +12,5 @@ Damit dockur diesen Ordner als Freigabe nutzt, ist er in `compose.yml` als `/dat
 Greift nach einem (Neu-)Start des `windows-test-pc`-Containers.
 
 > Bei einer laufenden VM ohne diesen Mount geht es auch direkt:
-> `docker cp datei pc-inventory-test-windows-test-pc-1:/tmp/smb/` – die Datei erscheint
+> `docker cp datei roster-test-windows-test-pc-1:/tmp/smb/` – die Datei erscheint
 > sofort unter `\\172.30.0.1\Data`.

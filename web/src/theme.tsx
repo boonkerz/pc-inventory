@@ -3,7 +3,7 @@ import { api } from "./api";
 import { useAuth } from "./auth";
 
 export type Theme = "light" | "dark";
-const STORAGE_KEY = "pcinv-theme";
+const STORAGE_KEY = "roster-theme";
 
 // resolveInitialTheme liest die lokal gecachte Wahl oder fällt auf die Systemeinstellung
 // zurück. Wird vor dem Login und für den ersten Render genutzt.

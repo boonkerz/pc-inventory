@@ -40,7 +40,7 @@ export function evalFilter(d: Device, f: DFilter): boolean {
   return f.match === "any" ? f.conditions.some(test) : f.conditions.every(test);
 }
 
-const STORE_KEY = "pcinv-saved-filters";
+const STORE_KEY = "roster-saved-filters";
 interface Saved { name: string; filter: DFilter; }
 function loadSaved(): Saved[] { try { return JSON.parse(localStorage.getItem(STORE_KEY) || "[]"); } catch { return []; } }
 function storeSaved(s: Saved[]) { localStorage.setItem(STORE_KEY, JSON.stringify(s)); }

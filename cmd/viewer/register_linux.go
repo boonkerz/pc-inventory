@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 )
 
-// registerScheme registriert pcinv-viewer als Handler für pcinv://-Links, sodass der
+// registerScheme registriert roster-viewer als Handler für roster://-Links, sodass der
 // Browser-Button „Im Viewer öffnen" den Viewer direkt mit dem Startcode startet.
 // Schreibt einen .desktop-Eintrag ins Nutzerverzeichnis (kein root nötig).
 func registerScheme() error {
@@ -23,19 +23,19 @@ func registerScheme() error {
 	}
 	desktop := fmt.Sprintf(`[Desktop Entry]
 Type=Application
-Name=PC-Inventory Fernsteuerung
+Name=Roster Fernsteuerung
 Exec=%s %%u
 Terminal=false
 NoDisplay=true
-MimeType=x-scheme-handler/pcinv;
+MimeType=x-scheme-handler/roster;
 `, exe)
-	path := filepath.Join(dir, "pcinv-viewer.desktop")
+	path := filepath.Join(dir, "roster-viewer.desktop")
 	if err := os.WriteFile(path, []byte(desktop), 0o644); err != nil {
 		return err
 	}
 	// Best-effort: MIME-Datenbank aktualisieren und als Default setzen.
 	_ = exec.Command("update-desktop-database", dir).Run()
-	_ = exec.Command("xdg-mime", "default", "pcinv-viewer.desktop", "x-scheme-handler/pcinv").Run()
+	_ = exec.Command("xdg-mime", "default", "roster-viewer.desktop", "x-scheme-handler/roster").Run()
 	return nil
 }
 

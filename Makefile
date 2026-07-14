@@ -1,4 +1,4 @@
-# PC-Inventory – Build- und Entwicklungs-Tasks.
+# Roster – Build- und Entwicklungs-Tasks.
 # modernc-SQLite + gopsutil sind CGo-frei, daher CGO_ENABLED=0 für statische Cross-Builds.
 
 # Versionsnummer aus der VERSION-Datei (Single Source of Truth); überschreibbar via `make VERSION=x`.
@@ -31,11 +31,11 @@ agent: ## Agent-Binary für die aktuelle Plattform bauen
 	$(GOFLAGS) go build -ldflags "$(LDFLAGS)" -o $(BIN)/agent ./cmd/agent
 
 viewer: ## Nativer Fernsteuerungs-Viewer für die aktuelle Plattform (SDL3, cgo-frei)
-	$(GOFLAGS) go build -ldflags "$(LDFLAGS)" -o $(BIN)/pcinv-viewer ./cmd/viewer
+	$(GOFLAGS) go build -ldflags "$(LDFLAGS)" -o $(BIN)/roster-viewer ./cmd/viewer
 
 viewer-embed: ## Linux-Viewer ins Server-Embed bauen (cgo-frei; SDL3 aus dem System)
 	mkdir -p internal/server/viewerdist/bin
-	$(GOFLAGS) GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o internal/server/viewerdist/bin/pcinv-viewer-linux-amd64 ./cmd/viewer
+	$(GOFLAGS) GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o internal/server/viewerdist/bin/roster-viewer-linux-amd64 ./cmd/viewer
 
 # SDL3-Laufzeitbibliotheken zum Bündeln für Windows/macOS (der Viewer selbst ist
 # cgo-frei; SDL3 wird zur Laufzeit geladen). Pfade überschreibbar via `make VAR=…`.
@@ -51,19 +51,19 @@ fetch-sdl3: ## SDL3-Windows-DLL (zum Bündeln) herunterladen und entpacken
 
 viewer-embed-windows: ## Windows-Viewer (cgo-frei) + gebündelte SDL3.dll als ZIP ins Embed
 	mkdir -p internal/server/viewerdist/bin
-	$(GOFLAGS) GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BIN)/pcinv-viewer.exe ./cmd/viewer
+	$(GOFLAGS) GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BIN)/roster-viewer.exe ./cmd/viewer
 	cp "$(SDL3_WIN_DLL)" $(BIN)/SDL3.dll
-	cd $(BIN) && rm -f pcinv-viewer-windows-amd64.zip && zip -j pcinv-viewer-windows-amd64.zip pcinv-viewer.exe SDL3.dll
-	mv $(BIN)/pcinv-viewer-windows-amd64.zip internal/server/viewerdist/bin/pcinv-viewer-windows-amd64.zip
-	rm -f $(BIN)/pcinv-viewer.exe $(BIN)/SDL3.dll
+	cd $(BIN) && rm -f roster-viewer-windows-amd64.zip && zip -j roster-viewer-windows-amd64.zip roster-viewer.exe SDL3.dll
+	mv $(BIN)/roster-viewer-windows-amd64.zip internal/server/viewerdist/bin/roster-viewer-windows-amd64.zip
+	rm -f $(BIN)/roster-viewer.exe $(BIN)/SDL3.dll
 
 viewer-embed-darwin: ## macOS-Viewer (cgo-frei) + gebündelte libSDL3.dylib als ZIP ins Embed
 	mkdir -p internal/server/viewerdist/bin
-	$(GOFLAGS) GOOS=darwin GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o $(BIN)/pcinv-viewer ./cmd/viewer
+	$(GOFLAGS) GOOS=darwin GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o $(BIN)/roster-viewer ./cmd/viewer
 	cp "$(SDL3_MAC_DYLIB)" $(BIN)/libSDL3.dylib
-	cd $(BIN) && rm -f pcinv-viewer-darwin-arm64.zip && zip -j pcinv-viewer-darwin-arm64.zip pcinv-viewer libSDL3.dylib
-	mv $(BIN)/pcinv-viewer-darwin-arm64.zip internal/server/viewerdist/bin/pcinv-viewer-darwin-arm64.zip
-	rm -f $(BIN)/pcinv-viewer $(BIN)/libSDL3.dylib
+	cd $(BIN) && rm -f roster-viewer-darwin-arm64.zip && zip -j roster-viewer-darwin-arm64.zip roster-viewer libSDL3.dylib
+	mv $(BIN)/roster-viewer-darwin-arm64.zip internal/server/viewerdist/bin/roster-viewer-darwin-arm64.zip
+	rm -f $(BIN)/roster-viewer $(BIN)/libSDL3.dylib
 
 build: server agent ## Server und Agent bauen
 
@@ -77,7 +77,7 @@ tidy: ## go mod tidy
 	go mod tidy
 
 run-server: ## Server lokal starten (SQLite, ohne TLS – nur Entwicklung)
-	PCINV_DB=sqlite://./inventory.db PCINV_ADDR=:8443 PCINV_SECURE_COOKIE=false go run ./cmd/server run
+	ROSTER_DB=sqlite://./inventory.db ROSTER_ADDR=:8443 ROSTER_SECURE_COOKIE=false go run ./cmd/server run
 
 # Cross-Compile des Agents für alle Zielplattformen.
 cross: web ## Agent für Windows/Linux/macOS und Server für Linux/Windows bauen

@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/thomaspeterson/pc-inventory/internal/shared"
+	"github.com/boonkerz/roster/internal/shared"
 )
 
 // commonPorts werden zur Erreichbarkeits-/Dienst-Erkennung angetastet (inkl.

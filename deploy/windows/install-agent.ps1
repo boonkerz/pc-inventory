@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Installiert den PC-Inventory-Agent als Windows-Dienst.
+    Installiert den Roster-Agent als Windows-Dienst.
 
 .DESCRIPTION
     Als Computer-Startskript per GPO verteilen. Das Skript ist idempotent:
@@ -31,9 +31,9 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$ServiceName = "pc-inventory-agent"
-$InstallDir  = Join-Path $env:ProgramFiles "PC-Inventory"
-$DataDir     = Join-Path $env:ProgramData "PC-Inventory"
+$ServiceName = "roster-agent"
+$InstallDir  = Join-Path $env:ProgramFiles "Roster"
+$DataDir     = Join-Path $env:ProgramData "Roster"
 $ExePath     = Join-Path $InstallDir "agent.exe"
 $ConfigPath  = Join-Path $DataDir "agent.yaml"
 
@@ -69,4 +69,4 @@ if (-not $existing) {
 }
 & $ExePath -config $ConfigPath start
 
-Write-Host "PC-Inventory-Agent installiert und gestartet."
+Write-Host "Roster-Agent installiert und gestartet."

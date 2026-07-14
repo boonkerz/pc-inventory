@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/thomaspeterson/pc-inventory/internal/shared"
+	"github.com/boonkerz/roster/internal/shared"
 )
 
 func TestFreqDue(t *testing.T) {

@@ -5,7 +5,7 @@ package collect
 import (
 	"context"
 
-	"github.com/thomaspeterson/pc-inventory/internal/shared"
+	"github.com/boonkerz/roster/internal/shared"
 )
 
 // osUpdateList fragt den Windows-Update-Agenten nach nicht installierten Updates inkl.

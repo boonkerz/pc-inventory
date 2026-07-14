@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/thomaspeterson/pc-inventory/internal/server/model"
+	"github.com/boonkerz/roster/internal/server/model"
 )
 
 // Row ist die Zusammenfassung je Kunde (Client).

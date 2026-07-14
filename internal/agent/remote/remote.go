@@ -9,8 +9,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/thomaspeterson/pc-inventory/internal/agent/transport"
-	"github.com/thomaspeterson/pc-inventory/internal/shared"
+	"github.com/boonkerz/roster/internal/agent/transport"
+	"github.com/boonkerz/roster/internal/shared"
 )
 
 // Run betreibt die Wake-Schleife, bis ctx endet. Bei jedem Auftrag wird die

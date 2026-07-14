@@ -36,7 +36,7 @@ export function TwoFactorSetup() {
     <div className="login-wrap">
       <div className="login-card" style={{ maxWidth: 440 }}>
         <ThemeToggle />
-        <div className="brand login-brand"><span className="brand-mark">▣</span> PC-Inventar</div>
+        <div className="brand login-brand"><span className="brand-mark">▣</span> Roster</div>
 
         {codes ? (
           <>

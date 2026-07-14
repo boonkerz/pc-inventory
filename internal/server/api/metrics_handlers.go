@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/thomaspeterson/pc-inventory/internal/server/store"
+	"github.com/boonkerz/roster/internal/server/store"
 )
 
 // handleMetricsHistory liefert die Auslastungs-Historie eines Geräts, je nach

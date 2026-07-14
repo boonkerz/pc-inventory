@@ -24,7 +24,7 @@ export function Layout({ children }: { children: ReactNode }) {
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <span className="brand-mark">▣</span> PC-Inventar
+          <span className="brand-mark">▣</span> Roster
         </div>
         <nav className="topnav">
           <NavLink to="/dashboard">{t("Übersicht")}</NavLink>

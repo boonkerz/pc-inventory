@@ -7,8 +7,8 @@ import (
 
 	"github.com/coder/websocket"
 
-	"github.com/thomaspeterson/pc-inventory/internal/agent/transport"
-	"github.com/thomaspeterson/pc-inventory/internal/shared"
+	"github.com/boonkerz/roster/internal/agent/transport"
+	"github.com/boonkerz/roster/internal/shared"
 )
 
 // ptySession ist die plattformabhängige PTY-Abstraktion. startPTY wird je Plattform

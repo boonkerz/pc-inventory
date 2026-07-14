@@ -6,9 +6,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/thomaspeterson/pc-inventory/internal/server/auth"
-	"github.com/thomaspeterson/pc-inventory/internal/server/model"
-	"github.com/thomaspeterson/pc-inventory/internal/server/store"
+	"github.com/boonkerz/roster/internal/server/auth"
+	"github.com/boonkerz/roster/internal/server/model"
+	"github.com/boonkerz/roster/internal/server/store"
 )
 
 func (s *Server) handleListTokens(w http.ResponseWriter, r *http.Request) {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/thomaspeterson/pc-inventory/internal/server/model"
+	"github.com/boonkerz/roster/internal/server/model"
 )
 
 // ReplaceVulnerabilities ersetzt die Schwachstellen eines Geräts (Ergebnis eines Scans).

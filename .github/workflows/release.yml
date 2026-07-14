@@ -51,11 +51,11 @@ jobs:
           make viewer-embed-windows       # Windows-Viewer (.exe + SDL3.dll) ins Embed
           make server                     # Frontend + Agents-Embed + Linux-Server
           mkdir -p dist
-          cp bin/server dist/pc-inventory-server-linux-amd64
+          cp bin/server dist/roster-server-linux-amd64
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$LDFLAGS" \
-            -o dist/pc-inventory-server-windows-amd64.exe ./cmd/server
-          cp internal/server/viewerdist/bin/pcinv-viewer-linux-amd64      dist/pcinv-viewer-linux-amd64
-          cp internal/server/viewerdist/bin/pcinv-viewer-windows-amd64.zip dist/pcinv-viewer-windows-amd64.zip
+            -o dist/roster-server-windows-amd64.exe ./cmd/server
+          cp internal/server/viewerdist/bin/roster-viewer-linux-amd64      dist/roster-viewer-linux-amd64
+          cp internal/server/viewerdist/bin/roster-viewer-windows-amd64.zip dist/roster-viewer-windows-amd64.zip
           ls -la dist
 
       - name: Ans Release hängen
@@ -94,7 +94,7 @@ jobs:
           brew install sdl3
           make viewer-embed-darwin SDL3_MAC_DYLIB="$(brew --prefix sdl3)/lib/libSDL3.dylib"
           mkdir -p dist
-          cp internal/server/viewerdist/bin/pcinv-viewer-darwin-arm64.zip dist/pcinv-viewer-darwin-arm64.zip
+          cp internal/server/viewerdist/bin/roster-viewer-darwin-arm64.zip dist/roster-viewer-darwin-arm64.zip
           ls -la dist
 
       - name: Ans Release hängen

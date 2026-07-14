@@ -8,7 +8,7 @@
 # danach beim ersten Login 2FA einrichten. Enrollment-Tokens für Agents werden
 # in der UI erzeugt (kein festes Seed-Token in Produktion!).
 
-name: pc-inventory
+name: roster
 
 volumes:
   inventory-data:
@@ -24,17 +24,17 @@ services:
     ports:
       - "80:8443"            # Host-Port 80 -> Container-HTTP 8443 (Proxy zielt hierauf)
     environment:
-      PCINV_ADDR: ":8443"
-      PCINV_DB: "sqlite:///var/lib/pc-inventory/inventory.db"
+      ROSTER_ADDR: ":8443"
+      ROSTER_DB: "sqlite:///var/lib/roster/inventory.db"
       # Hinter HTTPS-Proxy: Secure-Cookies behalten, obwohl der Server HTTP spricht.
-      PCINV_BEHIND_PROXY: "true"
-      PCINV_SECURE_COOKIE: "true"
-      PCINV_REQUIRE_2FA: "true"
-      PCINV_SEED_ADMIN_USER: "admin"
-      # PCINV_SEED_ADMIN_PASSWORD leer lassen -> wird beim Erststart erzeugt + geloggt.
-      # KEIN PCINV_SEED_ENROLL_TOKEN in Produktion (Tokens über die UI).
+      ROSTER_BEHIND_PROXY: "true"
+      ROSTER_SECURE_COOKIE: "true"
+      ROSTER_REQUIRE_2FA: "true"
+      ROSTER_SEED_ADMIN_USER: "admin"
+      # ROSTER_SEED_ADMIN_PASSWORD leer lassen -> wird beim Erststart erzeugt + geloggt.
+      # KEIN ROSTER_SEED_ENROLL_TOKEN in Produktion (Tokens über die UI).
     volumes:
-      - inventory-data:/var/lib/pc-inventory
+      - inventory-data:/var/lib/roster
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8443/"]
       interval: 10s

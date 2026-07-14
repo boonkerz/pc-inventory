@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/thomaspeterson/pc-inventory/internal/server/auth"
-	"github.com/thomaspeterson/pc-inventory/internal/server/model"
+	"github.com/boonkerz/roster/internal/server/auth"
+	"github.com/boonkerz/roster/internal/server/model"
 )
 
 const sessionTTL = 12 * time.Hour

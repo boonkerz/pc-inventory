@@ -5,7 +5,7 @@ package collect
 import (
 	"context"
 
-	"github.com/thomaspeterson/pc-inventory/internal/shared"
+	"github.com/boonkerz/roster/internal/shared"
 )
 
 func hwExtras(_ context.Context) ([]string, []shared.PhysicalDisk) {

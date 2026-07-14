@@ -26,6 +26,6 @@ docker/windows/shared/*
 .DS_Store
 /agent
 /server
-/internal/server/viewerdist/bin/pcinv-viewer-*
+/internal/server/viewerdist/bin/roster-viewer-*
 /third_party/sdl3/*.dll
 /third_party/sdl3/*.dylib

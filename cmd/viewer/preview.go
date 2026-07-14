@@ -11,7 +11,7 @@ import (
 )
 
 // previewBar rendert die Bedienleiste offscreen in ein PNG (Entwicklungs-Hilfe, um
-// das Aussehen ohne echtes Fenster zu prüfen): pcinv-viewer --previewbar out.png
+// das Aussehen ohne echtes Fenster zu prüfen): roster-viewer --previewbar out.png
 func previewBar(path string) error {
 	if !sdl.Init(sdl.InitVideo) {
 		return fmt.Errorf("sdl init: %s", sdl.GetError())

@@ -1,4 +1,4 @@
-module github.com/thomaspeterson/pc-inventory
+module github.com/boonkerz/roster
 
 go 1.26.4
 

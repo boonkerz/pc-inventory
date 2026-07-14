@@ -19,15 +19,15 @@ import (
 
 	"github.com/kardianos/service"
 
-	"github.com/thomaspeterson/pc-inventory/internal/agent/collect"
-	"github.com/thomaspeterson/pc-inventory/internal/netscan"
-	"github.com/thomaspeterson/pc-inventory/internal/snmp"
-	agentcfg "github.com/thomaspeterson/pc-inventory/internal/agent/config"
-	"github.com/thomaspeterson/pc-inventory/internal/agent/policy"
-	"github.com/thomaspeterson/pc-inventory/internal/agent/remote"
-	"github.com/thomaspeterson/pc-inventory/internal/agent/transport"
-	"github.com/thomaspeterson/pc-inventory/internal/agent/update"
-	"github.com/thomaspeterson/pc-inventory/internal/shared"
+	"github.com/boonkerz/roster/internal/agent/collect"
+	"github.com/boonkerz/roster/internal/netscan"
+	"github.com/boonkerz/roster/internal/snmp"
+	agentcfg "github.com/boonkerz/roster/internal/agent/config"
+	"github.com/boonkerz/roster/internal/agent/policy"
+	"github.com/boonkerz/roster/internal/agent/remote"
+	"github.com/boonkerz/roster/internal/agent/transport"
+	"github.com/boonkerz/roster/internal/agent/update"
+	"github.com/boonkerz/roster/internal/shared"
 )
 
 // version wird beim Build via -ldflags gesetzt.
@@ -59,9 +59,9 @@ func main() {
 
 	prg := &program{configPath: *configPath, log: log}
 	svcConfig := &service.Config{
-		Name:        "pc-inventory-agent",
-		DisplayName: "PC-Inventory Agent",
-		Description: "Meldet Hardware-, MAC- und IP-Inventar an den PC-Inventory-Server.",
+		Name:        "roster-agent",
+		DisplayName: "Roster Agent",
+		Description: "Meldet Hardware-, MAC- und IP-Inventar an den Roster-Server.",
 		Arguments:   []string{"-config", *configPath, "run"},
 	}
 	svc, err := service.New(prg, svcConfig)
@@ -807,8 +807,18 @@ func (p *program) updateChecker(ctx context.Context, interval time.Duration) {
 }
 
 func defaultConfigPath() string {
+	newPath := "/etc/roster/agent.yaml"
+	legacy := "/etc/pc-inventory/agent.yaml"
 	if runtime.GOOS == "windows" {
-		return `C:\ProgramData\PC-Inventory\agent.yaml`
+		newPath = `C:\ProgramData\Roster\agent.yaml`
+		legacy = `C:\ProgramData\PC-Inventory\agent.yaml`
 	}
-	return "/etc/pc-inventory/agent.yaml"
+	// Rückwärtskompatibilität: existiert nur die alte Konfiguration (Installation vor
+	// dem Rebranding, ohne gepinnten -config-Pfad im Dienst), diese weiter verwenden.
+	if _, err := os.Stat(newPath); err != nil {
+		if _, err2 := os.Stat(legacy); err2 == nil {
+			return legacy
+		}
+	}
+	return newPath
 }

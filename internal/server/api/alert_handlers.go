@@ -5,9 +5,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/thomaspeterson/pc-inventory/internal/server/alert"
-	"github.com/thomaspeterson/pc-inventory/internal/server/model"
-	"github.com/thomaspeterson/pc-inventory/internal/server/store"
+	"github.com/boonkerz/roster/internal/server/alert"
+	"github.com/boonkerz/roster/internal/server/model"
+	"github.com/boonkerz/roster/internal/server/store"
 )
 
 // --- Modulares Alerting: Master-Schalter + Provider-Katalog + Kanal-CRUD ---
@@ -155,8 +155,8 @@ func (s *Server) handleTestAlertChannel(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	n := alert.Notification{
-		Subject: "[PC-Inventar] Testbenachrichtigung",
-		Body:    "Dies ist eine Testnachricht des PC-Inventar-Alertings über Kanal \"" + ch.Name + "\".",
+		Subject: "[Roster] Testbenachrichtigung",
+		Body:    "Dies ist eine Testnachricht des Roster-Alertings über Kanal \"" + ch.Name + "\".",
 	}
 	if err := p.Send(r.Context(), ch.Config, n); err != nil {
 		s.writeErr(w, http.StatusBadGateway, "versand fehlgeschlagen: "+err.Error())

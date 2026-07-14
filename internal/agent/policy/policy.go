@@ -15,7 +15,7 @@ import (
 	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/mem"
 
-	"github.com/thomaspeterson/pc-inventory/internal/shared"
+	"github.com/boonkerz/roster/internal/shared"
 )
 
 const maxOutput = 4000 // Ausgabe je Check/Task kappen
@@ -266,7 +266,7 @@ func RunScript(ctx context.Context, shell, content string, platforms []string) (
 // shebangCommand schreibt das Skript in eine ausführbare temporäre Datei und liefert
 // ein Kommando, das sie direkt startet (Shebang wird also respektiert).
 func shebangCommand(ctx context.Context, content string) (*exec.Cmd, func(), error) {
-	f, err := os.CreateTemp("", "pcinv-script-*")
+	f, err := os.CreateTemp("", "roster-script-*")
 	if err != nil {
 		return nil, func() {}, err
 	}

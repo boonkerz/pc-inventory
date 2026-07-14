@@ -1,4 +1,4 @@
-# PC-Inventory
+# Roster
 
 **English** · [Deutsch](#deutsch)
 
@@ -44,10 +44,10 @@ as **one binary**; the UI is fully **bilingual (English / German)**.
   software) through the same tunnel: screen + mouse/keyboard, login screen / UAC, clipboard
   sync, monitor selection, drag-&-drop file transfer, **live resolution switch** (+ VM
   guest-driver install for Proxmox/VirtIO/SPICE). Use it in the **browser**, or a bundled
-  **native viewer** (`pcinv-viewer` – SDL3 via purego, **cgo-free**, cross-builds for
+  **native viewer** (`roster-viewer` – SDL3 via purego, **cgo-free**, cross-builds for
   Linux/Windows/macOS with no toolchain) with a floating AnyDesk-style toolbar (real
   **Ctrl+Alt+Del** via SendSAS, block local input, on-screen message, quality) and full
-  keyboard capture on Wayland – one-click launch via `pcinv://` link.
+  keyboard capture on Wayland – one-click launch via `roster://` link.
 - **Remote terminal** – interactive shell over an on-demand WebSocket (+ pop-out window).
 - **File browser & transfer** – browse the agent's filesystem, download / upload (≤ 32 MB).
 - **Services & processes** – list + start/stop/restart services, kill processes.
@@ -135,11 +135,11 @@ Config comes from a YAML file (`--config`) or environment variables. Common ones
 
 | Env | Meaning |
 |-----|---------|
-| `PCINV_ADDR` | Listen address (e.g. `:8443` or `:80`) |
-| `PCINV_DB` | `sqlite://./inventory.db` or `postgres://…` |
-| `PCINV_BEHIND_PROXY` | `true` when behind a TLS-terminating reverse proxy |
-| `PCINV_REQUIRE_2FA` | Enforce TOTP for all users (default `true`) |
-| `PCINV_RESULT_RETENTION_DAYS` | History retention (default 30; `0` = keep forever) |
+| `ROSTER_ADDR` | Listen address (e.g. `:8443` or `:80`) |
+| `ROSTER_DB` | `sqlite://./inventory.db` or `postgres://…` |
+| `ROSTER_BEHIND_PROXY` | `true` when behind a TLS-terminating reverse proxy |
+| `ROSTER_REQUIRE_2FA` | Enforce TOTP for all users (default `true`) |
+| `ROSTER_RESULT_RETENTION_DAYS` | History retention (default 30; `0` = keep forever) |
 
 **Production:** do **not** set a fixed seed enrollment token; create tokens in the UI.
 Behind a reverse proxy, forward WebSocket upgrades and use generous timeouts (≥ 60 s)
@@ -148,9 +148,9 @@ for the `/agent/wait` long-poll and the terminal.
 ### Account recovery (CLI)
 
 ```bash
-pc-inventory-server list-users
-pc-inventory-server reset-password <user> [new-password]
-pc-inventory-server disable-2fa <user>
+roster-server list-users
+roster-server reset-password <user> [new-password]
+roster-server disable-2fa <user>
 ```
 
 ## Security
@@ -171,9 +171,9 @@ pc-inventory-server disable-2fa <user>
 
 <a name="deutsch"></a>
 
-# PC-Inventory (Deutsch)
+# Roster (Deutsch)
 
-[English](#pc-inventory) · **Deutsch**
+[English](#roster) · **Deutsch**
 
 Eine selbst gehostete Plattform im Stil von TacticalRMM zur **Inventarisierung &
 Fernverwaltung** von Computern und Servern. Ein einzelner Go-Server (mit
@@ -200,11 +200,11 @@ Oberfläche ist vollständig **zweisprachig (Deutsch / Englisch)**.
   Server, keine Fremdsoftware) über denselben Tunnel: Bildschirm + Maus/Tastatur,
   Anmeldebildschirm / UAC, Zwischenablage-Sync, Monitor-Auswahl, Datei-Drag&Drop,
   **Live-Auflösungswechsel** (+ VM-Gasttreiber-Installer für Proxmox/VirtIO/SPICE).
-  Nutzbar im **Browser** oder per mitgeliefertem **nativem Viewer** (`pcinv-viewer` –
+  Nutzbar im **Browser** oder per mitgeliefertem **nativem Viewer** (`roster-viewer` –
   SDL3 via purego, **cgo-frei**, cross-baut für Linux/Windows/macOS ohne Toolchain) mit
   schwebender AnyDesk-artiger Bedienleiste (echtes **Strg+Alt+Entf** via SendSAS, Eingaben
   sperren, Meldung, Qualität) und vollständiger Tastatur-Erfassung auf Wayland –
-  Ein-Klick-Start via `pcinv://`-Link.
+  Ein-Klick-Start via `roster://`-Link.
 - **Remote-Terminal** – interaktive Shell über On-demand-WebSocket (+ Popout-Fenster).
 - **Dateibrowser & -transfer** – Dateisystem durchsuchen, herunter-/hochladen (≤ 32 MB).
 - **Dienste & Prozesse** – auflisten + Start/Stop/Neustart, Prozesse beenden.

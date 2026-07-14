@@ -18,28 +18,28 @@ Variante B – Image hier bauen und übertragen (kein Build auf dem Zielhost):
 
 ```sh
 # auf DIESER Maschine:
-docker build -f docker/server/Dockerfile -t pcinv-server:0.1.0 --build-arg VERSION=0.1.0 .
-docker save pcinv-server:0.1.0 | gzip > pcinv-server.tgz
-scp pcinv-server.tgz user@your-server:~/
+docker build -f docker/server/Dockerfile -t roster-server:0.1.0 --build-arg VERSION=0.1.0 .
+docker save roster-server:0.1.0 | gzip > roster-server.tgz
+scp roster-server.tgz user@your-server:~/
 
 # auf your-server:
-gunzip -c pcinv-server.tgz | docker load
+gunzip -c roster-server.tgz | docker load
 docker volume create inventory-data
-docker run -d --name pcinv --restart unless-stopped -p 80:8443 \
-  -e PCINV_ADDR=":8443" -e PCINV_DB="sqlite:///var/lib/pc-inventory/inventory.db" \
-  -e PCINV_BEHIND_PROXY=true -e PCINV_SECURE_COOKIE=true -e PCINV_REQUIRE_2FA=true \
-  -e PCINV_SEED_ADMIN_USER=admin \
-  -v inventory-data:/var/lib/pc-inventory pcinv-server:0.1.0
-docker logs pcinv | grep -i passwort   # einmaliges Admin-Passwort
+docker run -d --name roster --restart unless-stopped -p 80:8443 \
+  -e ROSTER_ADDR=":8443" -e ROSTER_DB="sqlite:///var/lib/roster/inventory.db" \
+  -e ROSTER_BEHIND_PROXY=true -e ROSTER_SECURE_COOKIE=true -e ROSTER_REQUIRE_2FA=true \
+  -e ROSTER_SEED_ADMIN_USER=admin \
+  -v inventory-data:/var/lib/roster roster-server:0.1.0
+docker logs roster | grep -i passwort   # einmaliges Admin-Passwort
 ```
 
 ## Wichtige Env-Variablen
 
-- `PCINV_BEHIND_PROXY=true` – behält Secure-Cookies, obwohl der Server selbst HTTP
+- `ROSTER_BEHIND_PROXY=true` – behält Secure-Cookies, obwohl der Server selbst HTTP
   spricht (TLS macht der Proxy). **Ohne das kommst du nicht rein.**
-- `PCINV_SECURE_COOKIE=true`, `PCINV_REQUIRE_2FA=true` (Default).
-- **Kein** `PCINV_SEED_ENROLL_TOKEN` in Produktion – Enrollment-Tokens in der UI erzeugen.
-- Admin-Passwort: `PCINV_SEED_ADMIN_PASSWORD` leer lassen → wird beim Erststart erzeugt
+- `ROSTER_SECURE_COOKIE=true`, `ROSTER_REQUIRE_2FA=true` (Default).
+- **Kein** `ROSTER_SEED_ENROLL_TOKEN` in Produktion – Enrollment-Tokens in der UI erzeugen.
+- Admin-Passwort: `ROSTER_SEED_ADMIN_PASSWORD` leer lassen → wird beim Erststart erzeugt
   und einmalig geloggt.
 
 ## Erstinbetriebnahme

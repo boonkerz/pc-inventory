@@ -1,6 +1,6 @@
 # Test-Stack (Docker Compose)
 
-Eine in sich geschlossene Testumgebung für PC-Inventory mit vier Komponenten:
+Eine in sich geschlossene Testumgebung für Roster mit vier Komponenten:
 
 | Service           | Rolle                                   | Status / Hinweis                          |
 |-------------------|-----------------------------------------|-------------------------------------------|
@@ -21,7 +21,7 @@ docker compose -f docker/compose.yml up --build   # startet ALLES inkl. Windows-
 Danach:
 
 - **Web-UI**: http://localhost:8443 — Login `admin` / `admin1234`
-- Der Linux-Agent registriert sich automatisch (festes `PCINV_SEED_ENROLL_TOKEN=test-enroll-token`,
+- Der Linux-Agent registriert sich automatisch (festes `ROSTER_SEED_ENROLL_TOKEN=test-enroll-token`,
   nur für diese Testumgebung) und erscheint als Gerät `linux-test-pc` mit Status *online*.
 - Der **Windows-PC** wird unbeaufsichtigt (deutsch) installiert; Fortschritt unter
   http://localhost:8006. Der Erststart lädt mehrere GB und dauert einige Minuten.
@@ -92,21 +92,21 @@ cp bin/agent-windows-amd64.exe docker/windows/oem/agent.exe
 - **Bestehende VM** (ohne Neuinstallation): die `agent.exe` über die Freigabe **`\\172.30.0.1\Data`**
   hineinkopieren (IP statt `host.lan`, da die VM den Samba-DC als DNS nutzt und den dockur-Namen
   nicht auflöst; `172.30.0.1` ist das interne Gateway, auf dem `smbd` lauscht). Datei dorthin legen mit
-  `docker cp docker/windows/oem/agent.exe pc-inventory-test-windows-test-pc-1:/tmp/smb/`
+  `docker cp docker/windows/oem/agent.exe roster-test-windows-test-pc-1:/tmp/smb/`
   (oder dauerhaft via `docker/windows/shared/`), dann in der VM (PowerShell als Admin):
   ```powershell
-  $dst = "$env:ProgramFiles\PC-Inventory"
-  New-Item -ItemType Directory -Force $dst, "$env:ProgramData\PC-Inventory" | Out-Null
+  $dst = "$env:ProgramFiles\Roster"
+  New-Item -ItemType Directory -Force $dst, "$env:ProgramData\Roster" | Out-Null
   Copy-Item \\172.30.0.1\Data\agent.exe "$dst\agent.exe"
   @"
   server_url: "http://172.19.0.11:8443"
   enrollment_token: "test-enroll-token"
   insecure_skip_verify: true
   interval: "30s"
-  state_path: "C:/ProgramData/PC-Inventory/agent-state.json"
-  "@ | Set-Content "$env:ProgramData\PC-Inventory\agent.yaml" -Encoding ascii
-  & "$dst\agent.exe" -config "$env:ProgramData\PC-Inventory\agent.yaml" install
-  & "$dst\agent.exe" -config "$env:ProgramData\PC-Inventory\agent.yaml" start
+  state_path: "C:/ProgramData/Roster/agent-state.json"
+  "@ | Set-Content "$env:ProgramData\Roster\agent.yaml" -Encoding ascii
+  & "$dst\agent.exe" -config "$env:ProgramData\Roster\agent.yaml" install
+  & "$dst\agent.exe" -config "$env:ProgramData\Roster\agent.yaml" start
   ```
 
 ### Der Domäne EXAMPLE.LOCAL beitreten

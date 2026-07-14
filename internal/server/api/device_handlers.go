@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/thomaspeterson/pc-inventory/internal/server/model"
+	"github.com/boonkerz/roster/internal/server/model"
 )
 
 // computeStatus leitet online/offline aus last_seen und der Offline-Schwelle ab.

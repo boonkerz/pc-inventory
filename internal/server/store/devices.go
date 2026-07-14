@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/thomaspeterson/pc-inventory/internal/server/model"
-	"github.com/thomaspeterson/pc-inventory/internal/shared"
+	"github.com/boonkerz/roster/internal/server/model"
+	"github.com/boonkerz/roster/internal/shared"
 )
 
 // CreateDevice legt ein neu enrolltes Gerät an.

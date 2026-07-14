@@ -151,7 +151,7 @@ func TestDecodeLaunchCode(t *testing.T) {
 	blob := `{"url":"https://x.de","device":"dev1","session":"s1","token":"t1"}`
 	std := base64.StdEncoding.EncodeToString([]byte(blob))
 	urlsafe := base64.RawURLEncoding.EncodeToString([]byte(blob))
-	for _, in := range []string{std, urlsafe, "pcinv://" + urlsafe, "pcinv://" + urlsafe + "/", "  pcinv://" + urlsafe + "  "} {
+	for _, in := range []string{std, urlsafe, "roster://" + urlsafe, "roster://" + urlsafe + "/", "  roster://" + urlsafe + "  "} {
 		c, err := decodeLaunchCode(in)
 		if err != nil {
 			t.Fatalf("decode %q: %v", in, err)
@@ -160,7 +160,7 @@ func TestDecodeLaunchCode(t *testing.T) {
 			t.Errorf("decode %q -> %+v", in, c)
 		}
 	}
-	if _, err := decodeLaunchCode("pcinv://not-base64!!!"); err == nil {
+	if _, err := decodeLaunchCode("roster://not-base64!!!"); err == nil {
 		t.Error("erwartete Fehler bei ungültigem Code")
 	}
 }

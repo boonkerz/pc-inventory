@@ -136,7 +136,7 @@ func (c *rfbClient) keyEvent(down bool, keysym uint32) error {
 	return c.write([]byte{4, d, 0, 0, byte(keysym >> 24), byte(keysym >> 16), byte(keysym >> 8), byte(keysym)})
 }
 
-// PC-Inventory-Steuerkanal: eigener RFB-Client->Server-Nachrichtentyp 250 mit
+// Roster-Steuerkanal: eigener RFB-Client->Server-Nachrichtentyp 250 mit
 // Subcommands (der Agent-RFB-Server behandelt sie; noVNC nutzt sie nicht).
 const (
 	ctrlMsgType = 250

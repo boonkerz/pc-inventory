@@ -58,19 +58,19 @@ export function Devices() {
   // Filterauswahl über Navigation hinweg merken (z.B. Gerätedetail -> zurück).
   const [org, setOrg] = useState<OrgFilter>(() => {
     try {
-      const s = sessionStorage.getItem("pcinv-org");
+      const s = sessionStorage.getItem("roster-org");
       if (s) return JSON.parse(s) as OrgFilter;
     } catch { /* ignore */ }
     return { kind: "all" };
   });
   useEffect(() => {
-    sessionStorage.setItem("pcinv-org", JSON.stringify(org));
+    sessionStorage.setItem("roster-org", JSON.stringify(org));
   }, [org]);
   // Ausgewähltes Gerät (für das untere Detail-Panel) ebenfalls merken.
-  const [selectedId, setSelectedId] = useState<string | null>(() => sessionStorage.getItem("pcinv-selected") || null);
+  const [selectedId, setSelectedId] = useState<string | null>(() => sessionStorage.getItem("roster-selected") || null);
   useEffect(() => {
-    if (selectedId) sessionStorage.setItem("pcinv-selected", selectedId);
-    else sessionStorage.removeItem("pcinv-selected");
+    if (selectedId) sessionStorage.setItem("roster-selected", selectedId);
+    else sessionStorage.removeItem("roster-selected");
   }, [selectedId]);
   // Direktsprung in einen Panel-Tab (z.B. Klick auf Checks/Tasks in der Liste).
   const [jump, setJump] = useState<{ tab: string; n: number }>({ tab: "", n: 0 });

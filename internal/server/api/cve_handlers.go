@@ -7,8 +7,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/thomaspeterson/pc-inventory/internal/server/cve"
-	"github.com/thomaspeterson/pc-inventory/internal/server/model"
+	"github.com/boonkerz/roster/internal/server/cve"
+	"github.com/boonkerz/roster/internal/server/model"
 )
 
 // handleScanCVE gleicht die installierte Software eines Geräts gegen OSV.dev ab und

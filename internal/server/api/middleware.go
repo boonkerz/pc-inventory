@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/thomaspeterson/pc-inventory/internal/server/auth"
-	"github.com/thomaspeterson/pc-inventory/internal/server/model"
+	"github.com/boonkerz/roster/internal/server/auth"
+	"github.com/boonkerz/roster/internal/server/model"
 )
 
 type ctxKey int
@@ -16,7 +16,7 @@ const (
 	ctxDevice
 )
 
-const sessionCookie = "pcinv_session"
+const sessionCookie = "roster_session"
 
 // requireUser verlangt eine gültige Session und legt den Benutzer in den Kontext.
 func (s *Server) requireUser(next http.Handler) http.Handler {

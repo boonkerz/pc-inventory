@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/thomaspeterson/pc-inventory/internal/server/model"
+	"github.com/boonkerz/roster/internal/server/model"
 )
 
 // Dispatch versendet eine Benachrichtigung asynchron über einen Kanal. Der Versand

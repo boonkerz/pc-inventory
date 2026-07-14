@@ -13,8 +13,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/thomaspeterson/pc-inventory/internal/server/config"
-	"github.com/thomaspeterson/pc-inventory/internal/server/store"
+	"github.com/boonkerz/roster/internal/server/config"
+	"github.com/boonkerz/roster/internal/server/store"
 )
 
 // Server bündelt Abhängigkeiten der HTTP-Handler.
@@ -58,7 +58,7 @@ func (s *Server) routes() http.Handler {
 				r.Post("/devices/{id}/remote/start", s.handleRemoteStart)
 				r.Get("/devices/{id}/remote/ws", s.handleDeviceVNC)
 			})
-			// Nativer Viewer (pcinv-viewer): keine Cookie-Session, Auth über das
+			// Nativer Viewer (roster-viewer): keine Cookie-Session, Auth über das
 			// pro-Sitzung erzeugte Viewer-Token (nur ein Admin kann es via
 			// /remote/start erzeugen). Sonst identisch zur Browser-WS.
 			r.Get("/devices/{id}/remote/viewer-ws", s.handleViewerVNC)

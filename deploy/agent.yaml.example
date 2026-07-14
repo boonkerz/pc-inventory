@@ -1,8 +1,8 @@
-# Beispiel-Konfiguration für den PC-Inventory-Agent.
+# Beispiel-Konfiguration für den Roster-Agent.
 # Standardpfade:
-#   Windows: C:\ProgramData\PC-Inventory\agent.yaml
-#   Linux:   /etc/pc-inventory/agent.yaml
-#   macOS:   /etc/pc-inventory/agent.yaml
+#   Windows: C:\ProgramData\Roster\agent.yaml
+#   Linux:   /etc/roster/agent.yaml
+#   macOS:   /etc/roster/agent.yaml
 
 # URL des Servers.
 server_url: "https://inventory.example.com:8443"

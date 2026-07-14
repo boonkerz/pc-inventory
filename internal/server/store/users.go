@@ -6,7 +6,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/thomaspeterson/pc-inventory/internal/server/model"
+	"github.com/boonkerz/roster/internal/server/model"
 )
 
 // ErrNotFound wird zurückgegeben, wenn ein Datensatz nicht existiert.

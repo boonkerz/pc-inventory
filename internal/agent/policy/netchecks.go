@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/thomaspeterson/pc-inventory/internal/shared"
+	"github.com/boonkerz/roster/internal/shared"
 )
 
 // strConfig liest einen String-Konfigwert (getrimmt).

@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/thomaspeterson/pc-inventory/internal/server/store"
+	"github.com/boonkerz/roster/internal/server/store"
 )
 
 // externalScanTimeout begrenzt jeden einzelnen Verbindungsversuch.

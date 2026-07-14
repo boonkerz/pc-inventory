@@ -11,23 +11,23 @@ const OS_LABEL: Record<OS, string> = { linux: "Linux", windows: "Windows", mac: 
 // buildScript erzeugt das fertige Install-Skript mit eingesetzten Variablen.
 function buildScript(os: OS, server: string, token: string): string {
   if (os === "windows") {
-    return `# PC-Inventory Agent für Windows – in einer PowerShell als Administrator ausführen
+    return `# Roster Agent für Windows – in einer PowerShell als Administrator ausführen
 $Server = "${server}"
 $Token  = "${token}"
 
-$dir = "$env:ProgramFiles\\PC-Inventory"
-New-Item -ItemType Directory -Force $dir, "$env:ProgramData\\PC-Inventory" | Out-Null
+$dir = "$env:ProgramFiles\\Roster"
+New-Item -ItemType Directory -Force $dir, "$env:ProgramData\\Roster" | Out-Null
 Invoke-WebRequest "$Server/api/v1/agents/windows-amd64" -OutFile "$dir\\agent.exe"
 
 @"
 server_url: "$Server"
 enrollment_token: "$Token"
 interval: "5m"
-state_path: "C:/ProgramData/PC-Inventory/agent-state.json"
-"@ | Set-Content "$env:ProgramData\\PC-Inventory\\agent.yaml" -Encoding ascii
+state_path: "C:/ProgramData/Roster/agent-state.json"
+"@ | Set-Content "$env:ProgramData\\Roster\\agent.yaml" -Encoding ascii
 
-& "$dir\\agent.exe" -config "$env:ProgramData\\PC-Inventory\\agent.yaml" install
-& "$dir\\agent.exe" -config "$env:ProgramData\\PC-Inventory\\agent.yaml" start`;
+& "$dir\\agent.exe" -config "$env:ProgramData\\Roster\\agent.yaml" install
+& "$dir\\agent.exe" -config "$env:ProgramData\\Roster\\agent.yaml" start`;
   }
 
   const archCase =
@@ -35,7 +35,7 @@ state_path: "C:/ProgramData/PC-Inventory/agent-state.json"
       ? `  arm64) PLAT=darwin-arm64 ;;\n  x86_64) PLAT=darwin-amd64 ;;`
       : `  x86_64) PLAT=linux-amd64 ;;\n  aarch64|arm64) PLAT=linux-arm64 ;;`;
   return `#!/usr/bin/env bash
-# PC-Inventory Agent für ${OS_LABEL[os]} – mit Root-Rechten ausführen
+# Roster Agent für ${OS_LABEL[os]} – mit Root-Rechten ausführen
 set -euo pipefail
 SERVER="${server}"
 TOKEN="${token}"
@@ -45,17 +45,17 @@ ${archCase}
   *) echo "Nicht unterstützte Architektur: $(uname -m)" >&2; exit 1 ;;
 esac
 
-sudo curl -fsSL "$SERVER/api/v1/agents/$PLAT" -o /usr/local/bin/pc-inventory-agent
-sudo chmod +x /usr/local/bin/pc-inventory-agent
-sudo mkdir -p /etc/pc-inventory /var/lib/pc-inventory
-sudo tee /etc/pc-inventory/agent.yaml >/dev/null <<EOF
+sudo curl -fsSL "$SERVER/api/v1/agents/$PLAT" -o /usr/local/bin/roster-agent
+sudo chmod +x /usr/local/bin/roster-agent
+sudo mkdir -p /etc/roster /var/lib/roster
+sudo tee /etc/roster/agent.yaml >/dev/null <<EOF
 server_url: "$SERVER"
 enrollment_token: "$TOKEN"
 interval: "5m"
-state_path: "/var/lib/pc-inventory/agent-state.json"
+state_path: "/var/lib/roster/agent-state.json"
 EOF
-sudo /usr/local/bin/pc-inventory-agent -config /etc/pc-inventory/agent.yaml install
-sudo /usr/local/bin/pc-inventory-agent -config /etc/pc-inventory/agent.yaml start`;
+sudo /usr/local/bin/roster-agent -config /etc/roster/agent.yaml install
+sudo /usr/local/bin/roster-agent -config /etc/roster/agent.yaml start`;
 }
 
 // buildOneLiner liefert den One-Liner, der das Install-Skript direkt vom Server holt

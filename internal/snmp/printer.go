@@ -11,7 +11,7 @@ import (
 
 	"github.com/gosnmp/gosnmp"
 
-	"github.com/thomaspeterson/pc-inventory/internal/shared"
+	"github.com/boonkerz/roster/internal/shared"
 )
 
 const (

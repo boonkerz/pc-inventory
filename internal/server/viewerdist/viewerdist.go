@@ -1,4 +1,4 @@
-// Package viewerdist bettet das native Fernsteuerungs-Viewer-Binary (pcinv-viewer)
+// Package viewerdist bettet das native Fernsteuerungs-Viewer-Binary (roster-viewer)
 // in den Server ein, damit Operatoren es direkt vom Inventory-Server herunterladen
 // können – ohne selbst SDL2/cgo bauen zu müssen.
 //
@@ -19,18 +19,18 @@ var binFS embed.FS
 
 // platform-Schlüssel ("<os>-<arch>") -> eingebetteter Dateiname.
 var files = map[string]string{
-	"linux-amd64":   "bin/pcinv-viewer-linux-amd64",
-	"linux-arm64":   "bin/pcinv-viewer-linux-arm64",
-	"windows-amd64": "bin/pcinv-viewer-windows-amd64.zip", // .exe + SDL3.dll
-	"darwin-arm64":  "bin/pcinv-viewer-darwin-arm64.zip",  // Binary + libSDL3.dylib
+	"linux-amd64":   "bin/roster-viewer-linux-amd64",
+	"linux-arm64":   "bin/roster-viewer-linux-arm64",
+	"windows-amd64": "bin/roster-viewer-windows-amd64.zip", // .exe + SDL3.dll
+	"darwin-arm64":  "bin/roster-viewer-darwin-arm64.zip",  // Binary + libSDL3.dylib
 }
 
 // downloadName ist der Dateiname, unter dem der Client speichert.
 var downloadName = map[string]string{
-	"linux-amd64":   "pcinv-viewer",
-	"linux-arm64":   "pcinv-viewer",
-	"windows-amd64": "pcinv-viewer-windows.zip",
-	"darwin-arm64":  "pcinv-viewer-macos.zip",
+	"linux-amd64":   "roster-viewer",
+	"linux-arm64":   "roster-viewer",
+	"windows-amd64": "roster-viewer-windows.zip",
+	"darwin-arm64":  "roster-viewer-macos.zip",
 }
 
 // Read liefert das Binary einer Plattform sowie den vorgeschlagenen Dateinamen.

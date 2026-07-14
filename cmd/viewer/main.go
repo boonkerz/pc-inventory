@@ -1,4 +1,4 @@
-// Command pcinv-viewer ist der native Fernsteuerungs-Viewer. Er spricht denselben
+// Command roster-viewer ist der native Fernsteuerungs-Viewer. Er spricht denselben
 // RFB-Tunnel wie die Browser-Ansicht, rendert mit SDL3 (über das cgo-freie
 // purego-Binding) und – entscheidend auf Wayland/niri – fordert per Keyboard-Grab
 // das Protokoll keyboard-shortcuts-inhibit an, sodass der Compositor ALLE Tasten
@@ -9,8 +9,8 @@
 // SDL3-Laufzeitbibliothek wird zur Laufzeit geladen (Linux: libSDL3.so, Windows:
 // SDL3.dll, macOS: libSDL3.dylib).
 //
-// Start: der Browser-Button „Im Viewer öffnen" ruft pcinv://<code>; alternativ
-// „Kopieren" + pcinv-viewer <code>, oder pcinv-viewer ohne Argumente → Dialog.
+// Start: der Browser-Button „Im Viewer öffnen" ruft roster://<code>; alternativ
+// „Kopieren" + roster-viewer <code>, oder roster-viewer ohne Argumente → Dialog.
 package main
 
 import (
@@ -54,7 +54,7 @@ func main() {
 	log.SetFlags(0)
 	if len(os.Args) >= 3 && os.Args[1] == "--previewbar" {
 		if err := previewBar(os.Args[2]); err != nil {
-			log.Fatalf("pcinv-viewer: previewbar: %v", err)
+			log.Fatalf("roster-viewer: previewbar: %v", err)
 		}
 		return
 	}
@@ -62,14 +62,14 @@ func main() {
 		switch a {
 		case "--register", "-register":
 			if err := registerScheme(); err != nil {
-				log.Fatalf("pcinv-viewer: register: %v", err)
+				log.Fatalf("roster-viewer: register: %v", err)
 			}
-			log.Println("pcinv://-Handler registriert – der Browser-Button „Im Viewer öffnen\" funktioniert jetzt.")
+			log.Println("roster://-Handler registriert – der Browser-Button „Im Viewer öffnen\" funktioniert jetzt.")
 			return
 		case "--selftest", "-selftest":
 			// Lädt die SDL3-Laufzeit und initialisiert das Video-Subsystem (kein Fenster).
 			if !sdl.Init(sdl.InitVideo) {
-				log.Fatalf("pcinv-viewer: selftest: sdl init: %s", sdl.GetError())
+				log.Fatalf("roster-viewer: selftest: sdl init: %s", sdl.GetError())
 			}
 			sdl.Quit()
 			log.Println("selftest ok")
@@ -78,10 +78,10 @@ func main() {
 	}
 	cfg, err := loadConfig()
 	if err != nil {
-		log.Fatalf("pcinv-viewer: %v", err)
+		log.Fatalf("roster-viewer: %v", err)
 	}
 	if err := runApp(cfg); err != nil {
-		log.Fatalf("pcinv-viewer: %v", err)
+		log.Fatalf("roster-viewer: %v", err)
 	}
 }
 
@@ -96,7 +96,7 @@ func runApp(cfg *launchConfig) error {
 
 	err := runAppInner(cfg)
 	if err != nil {
-		_ = sdl.ShowSimpleMessageBox(sdl.MessageBoxError, "PC-Inventory Fernsteuerung", err.Error(), nil)
+		_ = sdl.ShowSimpleMessageBox(sdl.MessageBoxError, "Roster Fernsteuerung", err.Error(), nil)
 	}
 	return err
 }
@@ -116,10 +116,10 @@ func runAppInner(cfg *launchConfig) error {
 }
 
 // decodeLaunchCode entschlüsselt einen base64-Startcode (url-safe oder Standard) in
-// eine launchConfig. Akzeptiert auch die pcinv://-URL-Form (inkl. prozent-kodiert).
+// eine launchConfig. Akzeptiert auch die roster://-URL-Form (inkl. prozent-kodiert).
 func decodeLaunchCode(code string) (*launchConfig, error) {
 	code = strings.TrimSpace(code)
-	code = strings.TrimPrefix(code, "pcinv://")
+	code = strings.TrimPrefix(code, "roster://")
 	code = strings.Trim(code, "/")
 	if dec, err := url.QueryUnescape(code); err == nil {
 		code = dec
@@ -140,14 +140,14 @@ func decodeLaunchCode(code string) (*launchConfig, error) {
 
 func loadConfig() (*launchConfig, error) {
 	args := os.Args[1:]
-	// Einzelner Nicht-Flag-Parameter = base64-Startcode (JSON) oder pcinv://-Link.
+	// Einzelner Nicht-Flag-Parameter = base64-Startcode (JSON) oder roster://-Link.
 	if len(args) == 1 && !strings.HasPrefix(args[0], "-") {
 		return decodeLaunchCode(args[0])
 	}
 	if len(args) == 0 {
 		return nil, nil // ohne Argumente -> Connect-Dialog
 	}
-	fs := flag.NewFlagSet("pcinv-viewer", flag.ContinueOnError)
+	fs := flag.NewFlagSet("roster-viewer", flag.ContinueOnError)
 	c := &launchConfig{}
 	fs.StringVar(&c.URL, "url", "", "Server-Basis-URL (https:// oder wss://)")
 	fs.StringVar(&c.Device, "device", "", "Geräte-ID")
@@ -198,7 +198,7 @@ func runSession(cfg *launchConfig) error {
 	winW, winH := clampWindow(rc.W, rc.H)
 	title := cfg.Title
 	if title == "" {
-		title = "PC-Inventory Fernsteuerung"
+		title = "Roster Fernsteuerung"
 	}
 	window := sdl.CreateWindow(title, int32(winW), int32(winH), sdl.WindowResizable)
 	if window == nil {

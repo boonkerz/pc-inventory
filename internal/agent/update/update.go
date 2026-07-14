@@ -11,7 +11,7 @@ import (
 
 	"github.com/minio/selfupdate"
 
-	"github.com/thomaspeterson/pc-inventory/internal/agent/transport"
+	"github.com/boonkerz/roster/internal/agent/transport"
 )
 
 // Platform liefert den Plattform-Schlüssel ("<os>-<arch>") für den Download.

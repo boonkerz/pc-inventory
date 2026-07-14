@@ -8,7 +8,7 @@ import (
 
 	"github.com/coder/websocket"
 
-	"github.com/thomaspeterson/pc-inventory/internal/agent/transport"
+	"github.com/boonkerz/roster/internal/agent/transport"
 )
 
 // handleVNC bedient eine Fernsteuerungs-Sitzung: der Agent ist selbst der VNC-Server.
