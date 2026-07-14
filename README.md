@@ -13,19 +13,24 @@ as **one binary**; the UI is fully **bilingual (English / German)**.
 
 ---
 
+## 📖 Documentation
+
+**Full documentation lives at [boonkerz.github.io/roster](https://boonkerz.github.io/roster/)** —
+getting started, all features, configuration and security.
+
 ## Screenshots
 
-**Dashboard** (English UI)
+**Dashboard**
 
-![Dashboard](docs/screenshots/dashboard-en.png)
+![Dashboard](docs/screenshots/dashboard.png)
 
-**Device panel – live utilization** (German UI)
+**Device detail**
 
-![Live utilization](docs/screenshots/live-de.png)
+![Device detail](docs/screenshots/device-detail.png)
 
-> More views and both languages: run [`scripts/screenshots.sh`](scripts/screenshots.sh)
-> to regenerate all screenshots locally (throwaway demo server + a real agent on your
-> machine, captured in English and German into `docs/screenshots/`).
+> Regenerate the documentation screenshots with
+> [`scripts/screenshots-docs.sh`](scripts/screenshots-docs.sh) (throwaway demo server + a
+> real agent on your machine, seeded with demo data, captured into `docs/screenshots/`).
 
 ---
 
@@ -181,10 +186,15 @@ eingebetteter React-Oberfläche und allen Agent-Binaries) kommuniziert mit einem
 schlanken, plattformübergreifenden Go-Agent. Alles kommt als **ein Binary**; die
 Oberfläche ist vollständig **zweisprachig (Deutsch / Englisch)**.
 
+## 📖 Dokumentation
+
+**Vollständige Dokumentation unter [boonkerz.github.io/roster](https://boonkerz.github.io/roster/)** —
+Einstieg, alle Funktionen, Konfiguration und Sicherheit.
+
 ## Screenshots
 
-> Lokal erzeugen mit [`scripts/screenshots.sh`](scripts/screenshots.sh) (startet eine
-> Demo-Instanz + echten lokalen Agent und nimmt die Bilder oben auf).
+> Lokal erzeugen mit [`scripts/screenshots-docs.sh`](scripts/screenshots-docs.sh) (startet
+> eine Demo-Instanz + echten lokalen Agent und nimmt die Bilder oben auf).
 
 ## Funktionen
 
