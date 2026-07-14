@@ -142,7 +142,7 @@ label input, label select { color: var(--text); }
   cursor: pointer; font-size: 16px; line-height: 1; padding: 0;
 }
 .theme-toggle:hover { color: var(--text); border-color: var(--accent); }
-.login-card .theme-toggle { position: absolute; top: 16px; right: 16px; }
+.login-card .theme-toggle { position: static; }
 .sidebar-foot .foot-row { display: flex; gap: 8px; align-items: center; }
 .sidebar-foot .foot-row .btn { flex: 1; }
 
@@ -277,7 +277,7 @@ label input, label select { color: var(--text); }
 .topuser-btn:hover { background: var(--surface-2, rgba(127,127,127,0.1)); }
 .lang-switch { background: none; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; color: var(--muted, #888); font: inherit; font-size: 12px; font-weight: 600; padding: 4px 8px; }
 .lang-switch:hover { color: var(--text); border-color: #4f8cff; }
-.login-top { display: flex; justify-content: flex-end; gap: 8px; }
+.login-top { position: absolute; top: 16px; right: 16px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 .help { margin: 8px 0; font-size: 13px; }
 .help summary { cursor: pointer; color: var(--muted); }
 .help summary:hover { color: var(--text); }
