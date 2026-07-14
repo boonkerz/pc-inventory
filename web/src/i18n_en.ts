@@ -107,6 +107,7 @@ export const EN: Record<string, string> = {
   // --- Geräte-Panel: Aktionen/Kopf ---
   "Aufwecken": "Wake up",
   "Wake-on-LAN über einen Nachbarn im selben Standort": "Wake-on-LAN via a neighbor in the same site",
+  "Wake-on-LAN: Server-Broadcast + (falls vorhanden) Nachbar-Agent im Standort": "Wake-on-LAN: server broadcast + (if available) neighbor agent in the site",
   "Neustart": "Reboot",
   "Token widerrufen": "Revoke token",
   "„{host}\" jetzt neu starten?": "Reboot \"{host}\" now?",
@@ -642,6 +643,8 @@ export const EN: Record<string, string> = {
   "Ohne Startcode gestartet, öffnet pcinv-viewer einen Dialog zum Einfügen.": "Started without a launch code, pcinv-viewer opens a paste dialog.",
   "Viewer herunterladen (Windows x86-64, .zip)": "Download viewer (Windows x86-64, .zip)",
   "entpacken (SDL3.dll enthalten); Handler registrieren:": "unzip (SDL3.dll included); register the handler:",
+  "Viewer herunterladen (macOS Apple Silicon, .zip)": "Download viewer (macOS Apple Silicon, .zip)",
+  "entpacken (libSDL3.dylib enthalten).": "unzip (libSDL3.dylib included).",
   "Anzeige / Auflösung": "Display / resolution",
   "Auflösungen laden": "Load resolutions",
   "aktuell": "current",

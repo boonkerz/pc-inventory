@@ -21,7 +21,8 @@ var binFS embed.FS
 var files = map[string]string{
 	"linux-amd64":   "bin/pcinv-viewer-linux-amd64",
 	"linux-arm64":   "bin/pcinv-viewer-linux-arm64",
-	"windows-amd64": "bin/pcinv-viewer-windows-amd64.zip", // .exe + SDL2.dll
+	"windows-amd64": "bin/pcinv-viewer-windows-amd64.zip", // .exe + SDL3.dll
+	"darwin-arm64":  "bin/pcinv-viewer-darwin-arm64.zip",  // Binary + libSDL3.dylib
 }
 
 // downloadName ist der Dateiname, unter dem der Client speichert.
@@ -29,6 +30,7 @@ var downloadName = map[string]string{
 	"linux-amd64":   "pcinv-viewer",
 	"linux-arm64":   "pcinv-viewer",
 	"windows-amd64": "pcinv-viewer-windows.zip",
+	"darwin-arm64":  "pcinv-viewer-macos.zip",
 }
 
 // Read liefert das Binary einer Plattform sowie den vorgeschlagenen Dateinamen.

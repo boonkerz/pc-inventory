@@ -283,6 +283,10 @@ export function DeviceRemote({ id, os, fill, autoStart, initialMonitor }: {
             {" — "}{t("entpacken (SDL3.dll enthalten); Handler registrieren:")}{" "}
             <code>pcinv-viewer.exe --register</code>
           </p>
+          <p className="muted small">
+            <a href="/api/v1/viewer/darwin-arm64" download>⭳ {t("Viewer herunterladen (macOS Apple Silicon, .zip)")}</a>
+            {" — "}{t("entpacken (libSDL3.dylib enthalten).")}
+          </p>
           <p className="muted small">{t("Für den „Im Viewer öffnen\"-Button einmalig den Protokoll-Handler registrieren:")} <code>pcinv-viewer --register</code>{". "}{t("Ohne Startcode gestartet, öffnet pcinv-viewer einen Dialog zum Einfügen.")}</p>
           {nativeStatus && <p className="muted small">{nativeStatus}</p>}
           {nativeCode && (

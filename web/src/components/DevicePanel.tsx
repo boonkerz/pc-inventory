@@ -94,8 +94,8 @@ export function DevicePanel({ id, focusTab, focusKey }: { id: string; focusTab?:
     onSuccess: () => { setNotes(null); invalidate(); },
   });
   const wake = useMutation({
-    mutationFn: () => api.post<{ mac: string }>(`/devices/${id}/wake`),
-    onSuccess: (d) => alert(t("Aufweck-Signal (Wake-on-LAN) an {mac} gesendet.", { mac: d.mac })),
+    mutationFn: () => api.post<{ mac: string; via: string[] }>(`/devices/${id}/wake`),
+    onSuccess: (d) => alert(t("Aufweck-Signal (Wake-on-LAN) an {mac} gesendet.", { mac: d.mac }) + " (" + (d.via || []).join(", ") + ")"),
     onError: (e) => alert((e as Error).message),
   });
   const setGroups = useMutation({ mutationFn: (g: string[]) => api.put(`/devices/${id}/groups`, { group_ids: g }), onSuccess: invalidate });
@@ -180,7 +180,7 @@ export function DevicePanel({ id, focusTab, focusKey }: { id: string; focusTab?:
           <button className="btn ghost sm" onClick={invalidate} title={t("Aktualisieren")}>↻</button>
           {canOperate && device.status !== "online" && (
             <button className="btn ghost sm" disabled={wake.isPending}
-              onClick={() => wake.mutate()} title={t("Wake-on-LAN über einen Nachbarn im selben Standort")}>
+              onClick={() => wake.mutate()} title={t("Wake-on-LAN: Server-Broadcast + (falls vorhanden) Nachbar-Agent im Standort")}>
               {t("Aufwecken")}
             </button>
           )}

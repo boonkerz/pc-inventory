@@ -358,21 +358,31 @@ func (s *Server) handleWake(w http.ResponseWriter, r *http.Request) {
 		s.writeErr(w, http.StatusBadRequest, "keine MAC-Adresse für dieses Gerät bekannt")
 		return
 	}
-	if dev.SiteID == nil || *dev.SiteID == "" {
-		s.writeErr(w, http.StatusBadRequest, "Gerät ist keinem Standort zugeordnet – WoL braucht einen Nachbarn im selben Netz")
+
+	// 1) Best effort: der Server broadcastet das Magic-Packet direkt (erreicht das
+	//    lokale Segment des Servers – reicht in flachen Netzen ohne Nachbar-Agent).
+	via := []string{}
+	if err := sendWOL(mac); err == nil {
+		via = append(via, "Server-Broadcast")
+	}
+
+	// 2) Zusätzlich, für andere Subnetze: ein Online-Nachbar im selben Standort schickt
+	//    das Packet in seinem Segment. Fehlt einer, ist das kein Fehler.
+	commandID := ""
+	if dev.SiteID != nil && *dev.SiteID != "" {
+		if waker, err := s.store.OnlineNeighborInSite(r.Context(), *dev.SiteID, targetID, time.Now().Add(-s.cfg.OfflineAfter)); err == nil {
+			if id, qerr := s.queueCommand(r.Context(), waker, "wake_lan", "WoL an "+mac, map[string]any{"mac": mac}); qerr == nil {
+				commandID = id
+				via = append(via, "Nachbar-Agent")
+			}
+		}
+	}
+
+	if len(via) == 0 {
+		s.writeErr(w, http.StatusConflict, "WoL fehlgeschlagen: kein Broadcast möglich und kein Nachbar im Standort online")
 		return
 	}
-	waker, err := s.store.OnlineNeighborInSite(r.Context(), *dev.SiteID, targetID, time.Now().Add(-s.cfg.OfflineAfter))
-	if err != nil {
-		s.writeErr(w, http.StatusConflict, "kein Online-Gerät im selben Standort zum Aufwecken gefunden")
-		return
-	}
-	id, err := s.queueCommand(r.Context(), waker, "wake_lan", "WoL an "+mac, map[string]any{"mac": mac})
-	if err != nil {
-		s.mapStoreErr(w, err)
-		return
-	}
-	s.writeJSON(w, http.StatusCreated, map[string]string{"command_id": id, "mac": mac, "waker_id": waker})
+	s.writeJSON(w, http.StatusCreated, map[string]any{"command_id": commandID, "mac": mac, "via": via})
 }
 
 // handleGetCommand liefert einen einzelnen Befehl inkl. Ergebnis (für Polling).

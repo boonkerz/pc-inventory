@@ -64,3 +64,42 @@ jobs:
           tag_name: ${{ steps.meta.outputs.tag }}
           files: dist/*
           fail_on_unmatched_files: true
+
+  # macOS-Viewer separat auf einem macOS-Runner: dort liefert Homebrew die
+  # libSDL3.dylib zum Bündeln (der Viewer selbst ist weiterhin cgo-frei).
+  macos-viewer:
+    runs-on: macos-latest
+    steps:
+      - name: Tag/Version ermitteln
+        id: meta
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.meta.outputs.tag }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: SDL3 (Homebrew) + Viewer bauen
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          echo "$VERSION" > VERSION
+          brew install sdl3
+          make viewer-embed-darwin SDL3_MAC_DYLIB="$(brew --prefix sdl3)/lib/libSDL3.dylib"
+          mkdir -p dist
+          cp internal/server/viewerdist/bin/pcinv-viewer-darwin-arm64.zip dist/pcinv-viewer-darwin-arm64.zip
+          ls -la dist
+
+      - name: Ans Release hängen
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          files: dist/*
+          fail_on_unmatched_files: true
