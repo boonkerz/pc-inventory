@@ -9,6 +9,8 @@ hosts it finds as **assets** into a site. Hostnames are resolved via reverse DNS
 and **mDNS**. You can then **adopt** an asset as an unmanaged device, and later merge it
 with the real agent once one is installed on that host.
 
+![Network scan](../screenshots/network-scan.png){ .shadow }
+
 ## SNMP
 
 Query **SNMP** printer information — model, serial, firmware, page count and toner levels —

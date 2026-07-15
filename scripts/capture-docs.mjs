@@ -91,8 +91,36 @@ try {
   await p.click('button.tab:has-text("Remote control")'); await wait(1200);
   await shot("remote-control");
 } catch (e) { console.log("remote:", e.message); }
+try {
+  await p.click('button.tab-group:has-text("Access")'); await wait(200);
+  await p.click('button.tab:has-text("Terminal")'); await wait(3500); // WS verbinden + Prompt
+  await shot("terminal");
+} catch (e) { console.log("terminal:", e.message); }
+try {
+  await p.click('button.tab-group:has-text("Access")'); await wait(200);
+  await p.click('button.tab:has-text("Files")'); await wait(2500);
+  await shot("files");
+} catch (e) { console.log("files:", e.message); }
+try {
+  await p.click('button.tab-group:has-text("System")'); await wait(200);
+  await p.click('button.tab:has-text("Services/Processes")');
+  await p.waitForSelector(".scroll-list table tbody tr", { timeout: 30000 }); await wait(800);
+  await shot("services");
+} catch (e) { console.log("services:", e.message); }
 
 try { await p.goto(BASE + "/policies"); await wait(1200); await shot("policies"); } catch (e) { console.log("policies:", e.message); }
+
+// Nav-Modals (auf einer Seite mit sichtbarer Topnav).
+try {
+  await p.click('button.navbtn:has-text("Network scan")'); await wait(900);
+  await shot("network-scan");
+  await p.keyboard.press("Escape"); await wait(400);
+} catch (e) { console.log("netscan:", e.message); }
+try {
+  await p.click('button.navbtn:has-text("Bulk action")'); await wait(900);
+  await shot("bulk-action");
+  await p.keyboard.press("Escape"); await wait(400);
+} catch (e) { console.log("bulk:", e.message); }
 
 try {
   if (await openSettings("Users & roles")) {

@@ -40,6 +40,8 @@ install. Screen, mouse and keyboard are relayed through the tunnel. Features:
 An interactive shell over an on-demand WebSocket, with a pop-out window. On Windows you can
 run as SYSTEM or as the logged-in user.
 
+![Remote terminal](../screenshots/terminal.png){ .shadow }
+
 ## Consent (attended vs unattended)
 
 Remote sessions can require **consent at the device** (a prompt the user must accept) or run

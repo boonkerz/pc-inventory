@@ -28,10 +28,6 @@ getting started, all features, configuration and security.
 
 ![Device detail](docs/screenshots/device-detail.png)
 
-> Regenerate the documentation screenshots with
-> [`scripts/screenshots-docs.sh`](scripts/screenshots-docs.sh) (throwaway demo server + a
-> real agent on your machine, seeded with demo data, captured into `docs/screenshots/`).
-
 ---
 
 ## Features
@@ -190,11 +186,6 @@ Oberfläche ist vollständig **zweisprachig (Deutsch / Englisch)**.
 
 **Vollständige Dokumentation unter [boonkerz.github.io/roster](https://boonkerz.github.io/roster/)** —
 Einstieg, alle Funktionen, Konfiguration und Sicherheit.
-
-## Screenshots
-
-> Lokal erzeugen mit [`scripts/screenshots-docs.sh`](scripts/screenshots-docs.sh) (startet
-> eine Demo-Instanz + echten lokalen Agent und nimmt die Bilder oben auf).
 
 ## Funktionen
 

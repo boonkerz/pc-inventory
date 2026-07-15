@@ -15,6 +15,8 @@ out to a **device, company, site or tag** in one action.
 Run a script, trigger an update scan/install, or install software **across a whole company,
 site or tag** at once.
 
+![Bulk action](../screenshots/bulk-action.png){ .shadow }
+
 ## Tags & smart groups
 
 Free-form **tags** plus **rule-based smart groups** — dynamic membership from expressions
@@ -25,6 +27,10 @@ like `OS contains windows AND updates > 0`.
 From a device's detail page you can browse its filesystem and transfer files (≤ 32 MB),
 list and start/stop/restart **services**, kill **processes**, and run a TreeSize-style live
 **storage explorer** with a pie chart.
+
+![Services and processes](../screenshots/services.png){ .shadow }
+
+![File browser](../screenshots/files.png){ .shadow }
 
 ## Security collectors
 
