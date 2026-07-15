@@ -249,6 +249,10 @@ func runSession(cfg *launchConfig) error {
 	quality := byte(1)
 	qName := []string{"N", "M", "H"}
 	hoverID, lastHover := "", "?"
+	// Zwischenablage-Sync: lastClip verhindert Echos (Gerät→Viewer nicht sofort
+	// zurücksenden); die lokale Ablage wird periodisch gepollt.
+	lastClip := sdl.GetClipboardText()
+	lastClipPoll := time.Now()
 
 	doAction := func(id string) {
 		uiDirty = true
@@ -379,7 +383,12 @@ func runSession(cfg *launchConfig) error {
 					applyRect(texture, up)
 				}
 				painted = true
-			case <-cut:
+			case txt := <-cut:
+				// Gerät → Viewer: in die lokale Zwischenablage übernehmen.
+				if txt != lastClip {
+					lastClip = txt
+					setClipboardText(txt)
+				}
 			case err := <-done:
 				if err != nil {
 					log.Printf("verbindung beendet: %v", err)
@@ -388,6 +397,15 @@ func runSession(cfg *launchConfig) error {
 				break drain
 			default:
 				break drain
+			}
+		}
+
+		// Viewer → Gerät: lokale Zwischenablage pollen und Änderungen senden.
+		if time.Since(lastClipPoll) > 500*time.Millisecond {
+			lastClipPoll = time.Now()
+			if cur := sdl.GetClipboardText(); cur != lastClip {
+				lastClip = cur
+				_ = rc.clientCutText(cur)
 			}
 		}
 

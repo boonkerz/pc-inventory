@@ -54,9 +54,9 @@ func TestJpegToBGRX(t *testing.T) {
 
 func TestRuneToKeysym(t *testing.T) {
 	cases := map[rune]uint32{
-		'A':      0x41,
-		'a':      0x61,
-		'!':      0x21,
+		'A': 0x41,
+		'a': 0x61,
+		'!': 0x21,
 		'ä': 0x00e4,     // ä (Latin-1)
 		'€': 0x010020ac, // € (Unicode-Keysym)
 	}
@@ -64,6 +64,21 @@ func TestRuneToKeysym(t *testing.T) {
 		if got := runeToKeysym(r); got != want {
 			t.Errorf("runeToKeysym(%q) = %#x, want %#x", r, got, want)
 		}
+	}
+}
+
+func TestLatin1EncodeDecode(t *testing.T) {
+	// CR wird verworfen, Zeichen > 255 werden zu '?', Latin-1 als rohe Bytes.
+	if got := latin1Encode("a\r\nä"); !bytes.Equal(got, []byte{'a', '\n', 0xe4}) {
+		t.Errorf("latin1Encode CR/Latin-1 = %v", got)
+	}
+	if got := latin1Encode("x€y"); !bytes.Equal(got, []byte("x?y")) {
+		t.Errorf("latin1Encode unicode = %v", got)
+	}
+	// Round-Trip für den Latin-1-Bereich.
+	in := "Hallo Welt! äöü ñ"
+	if got := latin1Decode(latin1Encode(in)); got != in {
+		t.Errorf("round-trip = %q, want %q", got, in)
 	}
 }
 
@@ -79,11 +94,11 @@ func mockServer(t *testing.T, conn net.Conn, w, h int, firstPixel [4]byte) {
 	be16 := func(v int) []byte { return []byte{byte(v >> 8), byte(v)} }
 
 	conn.Write([]byte("RFB 003.008\n"))
-	rd(12)                          // client version
-	conn.Write([]byte{1, 1})        // security: 1 typ = None
-	rd(1)                           // gewählter typ
-	conn.Write([]byte{0, 0, 0, 0})  // SecurityResult
-	rd(1)                           // ClientInit
+	rd(12)                         // client version
+	conn.Write([]byte{1, 1})       // security: 1 typ = None
+	rd(1)                          // gewählter typ
+	conn.Write([]byte{0, 0, 0, 0}) // SecurityResult
+	rd(1)                          // ClientInit
 	si := append(be16(w), be16(h)...)
 	si = append(si, make([]byte, 16)...) // pixelformat (vom client ignoriert)
 	si = append(si, 0, 0, 0, 0)          // name-länge 0
@@ -98,7 +113,7 @@ func mockServer(t *testing.T, conn net.Conn, w, h int, firstPixel [4]byte) {
 	rd(10) // FBUR
 
 	// Ein Raw-Rechteck über den ganzen Schirm.
-	frame := []byte{0, 0}         // FramebufferUpdate + pad
+	frame := []byte{0, 0}             // FramebufferUpdate + pad
 	frame = append(frame, be16(1)...) // 1 rechteck
 	frame = append(frame, be16(0)...) // x
 	frame = append(frame, be16(0)...) // y

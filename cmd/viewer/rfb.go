@@ -166,6 +166,14 @@ func (c *rfbClient) controlQuality(level byte) error {
 	return c.write([]byte{ctrlMsgType, ctrlQuality, level})
 }
 
+// clientCutText sendet die lokale Zwischenablage ans Gerät (RFB ClientCutText,
+// Typ 6). CutText ist Latin-1 — Zeichen > 255 gehen verloren.
+func (c *rfbClient) clientCutText(text string) error {
+	bt := latin1Encode(text)
+	msg := []byte{6, 0, 0, 0, byte(len(bt) >> 24), byte(len(bt) >> 16), byte(len(bt) >> 8), byte(len(bt))}
+	return c.write(append(msg, bt...))
+}
+
 func (c *rfbClient) pointerEvent(mask, x, y int) error {
 	if x < 0 {
 		x = 0
@@ -315,4 +323,19 @@ func latin1Decode(b []byte) string {
 		r[i] = rune(c)
 	}
 	return string(r)
+}
+
+// latin1Encode wandelt Text nach Latin-1 (CR/LF bleiben, Zeichen > 255 → '?').
+func latin1Encode(s string) []byte {
+	out := make([]byte, 0, len(s))
+	for _, r := range s {
+		if r == '\r' {
+			continue // RFB erwartet reines LF
+		}
+		if r > 0xff {
+			r = '?'
+		}
+		out = append(out, byte(r))
+	}
+	return out
 }
