@@ -443,6 +443,20 @@ func (p *program) runPolicy(ctx context.Context) {
 			path, _ := cmd.Payload["path"].(string)
 			xfer, _ := cmd.Payload["xfer"].(string)
 			exit, output = p.writeFile(ctx, xfer, path)
+		case "make_dir":
+			path, _ := cmd.Payload["path"].(string)
+			if err := collect.MakeDir(path); err != nil {
+				exit, output = 1, err.Error()
+			} else {
+				output = "Ordner angelegt"
+			}
+		case "delete_path":
+			path, _ := cmd.Payload["path"].(string)
+			if err := collect.DeletePath(path); err != nil {
+				exit, output = 1, err.Error()
+			} else {
+				output = "Gelöscht"
+			}
 		case "reboot":
 			output = "Neustart wird eingeleitet"
 			// Verzögert neu starten, damit dieses Ergebnis noch gemeldet werden kann.

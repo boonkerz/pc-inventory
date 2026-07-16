@@ -88,3 +88,19 @@ func ReadFileCapped(path string) ([]byte, error) {
 func WriteFileCapped(path string, data []byte) error {
 	return os.WriteFile(path, data, 0644)
 }
+
+// MakeDir legt ein Verzeichnis an (inkl. fehlender Elternverzeichnisse).
+func MakeDir(path string) error {
+	if path == "" {
+		return os.ErrInvalid
+	}
+	return os.MkdirAll(path, 0755)
+}
+
+// DeletePath entfernt eine Datei oder ein (leeres oder gefülltes) Verzeichnis.
+func DeletePath(path string) error {
+	if path == "" {
+		return os.ErrInvalid
+	}
+	return os.RemoveAll(path)
+}

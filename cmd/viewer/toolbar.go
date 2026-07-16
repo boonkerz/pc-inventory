@@ -37,6 +37,7 @@ func newToolbar(txt *textRenderer) *toolbar {
 		{id: "esc", label: "Esc"},
 		{id: "lock", label: "Sperren"},
 		{id: "msg", label: "Meldung"},
+		{id: "files", label: "Dateien"},
 		{id: "qual", label: "Qualität: M"},
 		{id: "full", label: "Vollbild"},
 		{id: "disc", label: "Trennen", accent: 1},

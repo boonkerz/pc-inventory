@@ -245,6 +245,7 @@ func runSession(cfg *launchConfig) error {
 
 	tb := newToolbar(txt)
 	v := &viewer{rc: rc}
+	fm := newFileManager(txt, cfg)
 	fullscreen, locked, uiDirty := false, false, false
 	quality := byte(1)
 	qName := []string{"N", "M", "H"}
@@ -291,6 +292,8 @@ func runSession(cfg *launchConfig) error {
 			}
 		case "msg":
 			_ = rc.controlMessage("Fernwartung aktiv - bitte nicht ausschalten.")
+		case "files":
+			fm.toggle()
 		case "qual":
 			quality = (quality + 1) % 3
 			_ = rc.controlQuality(quality)
@@ -318,13 +321,33 @@ func runSession(cfg *launchConfig) error {
 				// jetzt sicher ans Gerät schieben (Wayland liefert sie erst bei Fokus).
 				pushClip()
 			case sdl.EventKeyDown, sdl.EventKeyUp:
+				down := ev.Type() == sdl.EventKeyDown
+				ke := ev.Key()
+				if down && ke.Key == sdl.KeycodeF9 { // Dateimanager umschalten
+					fm.toggle()
+					uiDirty = true
+					break
+				}
+				if fm.active {
+					if down && fm.onKey(ke.Key) {
+						uiDirty = true
+					}
+					break // Tasten nicht ans Gerät weiterreichen
+				}
 				v.onKey(&ev)
 			case sdl.EventTextInput:
 				ti := ev.Text()
+				if fm.active {
+					fm.onText(ti.Text())
+					break
+				}
 				v.onText(ti.Text())
 			case sdl.EventMouseMotion:
 				m := ev.Motion()
 				hoverID = tb.hit(m.X, m.Y)
+				if fm.active {
+					break
+				}
 				if rx, ry, ok := winToRemote(m.X, m.Y, dst, float32(texW), float32(texH)); ok {
 					v.curMask = int(m.State) & 0x7
 					v.lastX, v.lastY = rx, ry
@@ -340,6 +363,13 @@ func runSession(cfg *launchConfig) error {
 						} else if id != "" {
 							doAction(id)
 						}
+					}
+					break
+				}
+				if fm.active {
+					if down && b.Button == uint8(sdl.ButtonLeft) {
+						fm.onClick(b.X, b.Y, b.Clicks >= 2)
+						uiDirty = true
 					}
 					break
 				}
@@ -367,6 +397,13 @@ func runSession(cfg *launchConfig) error {
 				_ = rc.pointerEvent(v.curMask, rx, ry)
 			case sdl.EventMouseWheel:
 				wh := ev.Wheel()
+				if fm.active {
+					if wh.Y != 0 {
+						fm.onWheel(wh.Y)
+						uiDirty = true
+					}
+					break
+				}
 				if wh.Y != 0 {
 					bit := 3
 					if wh.Y < 0 {
@@ -422,11 +459,14 @@ func runSession(cfg *launchConfig) error {
 			pushClip()
 		}
 
-		if painted || uiDirty || hoverID != lastHover {
+		if painted || uiDirty || fm.active || hoverID != lastHover {
 			lastHover, uiDirty = hoverID, false
 			sdl.SetRenderDrawColor(renderer, 0x0b, 0x0e, 0x14, 0xff)
 			sdl.RenderClear(renderer)
 			sdl.RenderTexture(renderer, texture, nil, &dst)
+			if fm.active {
+				fm.draw(float32(winW), float32(winH))
+			}
 			tb.draw(hoverID, locked)
 			sdl.RenderPresent(renderer)
 		}

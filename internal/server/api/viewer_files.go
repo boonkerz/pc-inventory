@@ -1,0 +1,246 @@
+package api
+
+import (
+	"io"
+	"net/http"
+	"sync"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+)
+
+// fileCapTTL ist die (gleitende) Lebensdauer einer Datei-Capability des nativen
+// Viewers. Bewusst von der VNC-Session entkoppelt (die nach remoteSessionTTL aus
+// der Session-Map entfernt wird), damit der Dateimanager auch in langen Sitzungen
+// funktioniert. Jede Nutzung verlängert die Frist.
+const fileCapTTL = 30 * time.Minute
+
+type fileCap struct {
+	deviceID string
+	expiry   time.Time
+}
+
+// fileCapHub bildet ein Viewer-Datei-Token auf ein Gerät ab. Das Token ist eine
+// hochentropische 128-bit-Capability (newSessionID), die nur ein Admin via
+// /remote/start erhält – daher genügt der Map-Lookup als Prüfung.
+type fileCapHub struct {
+	mu   sync.Mutex
+	caps map[string]fileCap
+}
+
+func newFileCapHub() *fileCapHub {
+	h := &fileCapHub{caps: map[string]fileCap{}}
+	go h.gc()
+	return h
+}
+
+func (h *fileCapHub) add(token, deviceID string) {
+	h.mu.Lock()
+	h.caps[token] = fileCap{deviceID: deviceID, expiry: time.Now().Add(fileCapTTL)}
+	h.mu.Unlock()
+}
+
+// resolve liefert die Geräte-ID zum Token und verlängert die Frist (sliding TTL).
+func (h *fileCapHub) resolve(token string) (string, bool) {
+	if token == "" {
+		return "", false
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	c, ok := h.caps[token]
+	if !ok || time.Now().After(c.expiry) {
+		return "", false
+	}
+	c.expiry = time.Now().Add(fileCapTTL)
+	h.caps[token] = c
+	return c.deviceID, true
+}
+
+func (h *fileCapHub) gc() {
+	t := time.NewTicker(time.Minute)
+	defer t.Stop()
+	for range t.C {
+		h.mu.Lock()
+		for tok, c := range h.caps {
+			if time.Now().After(c.expiry) {
+				delete(h.caps, tok)
+			}
+		}
+		h.mu.Unlock()
+	}
+}
+
+// auth prüft das Viewer-Token (Bearer-Header oder ?token=) und stellt sicher, dass
+// es zum Gerät der URL passt. Liefert die Geräte-ID oder schreibt 401/403.
+func (s *Server) viewerFileAuth(w http.ResponseWriter, r *http.Request) (string, bool) {
+	tok := bearerToken(r)
+	if tok == "" {
+		tok = r.URL.Query().Get("token")
+	}
+	devID, ok := s.fileCaps.resolve(tok)
+	if !ok {
+		s.writeErr(w, http.StatusUnauthorized, "viewer-token ungültig oder abgelaufen")
+		return "", false
+	}
+	if devID != chi.URLParam(r, "id") {
+		s.writeErr(w, http.StatusForbidden, "token gilt nicht für dieses Gerät")
+		return "", false
+	}
+	return devID, true
+}
+
+// handleViewerBrowse reiht – wie die Web-UI – eine Verzeichnisauflistung ein.
+func (s *Server) handleViewerBrowse(w http.ResponseWriter, r *http.Request) {
+	devID, ok := s.viewerFileAuth(w, r)
+	if !ok {
+		return
+	}
+	var req struct {
+		Path string `json:"path"`
+	}
+	if !s.decodeJSON(w, r, &req) {
+		return
+	}
+	id, err := s.queueCommand(r.Context(), devID, "browse_dir", "Dateien auflisten",
+		map[string]any{"path": req.Path})
+	if err != nil {
+		s.mapStoreErr(w, err)
+		return
+	}
+	s.writeJSON(w, http.StatusCreated, map[string]string{"command_id": id})
+}
+
+// handleViewerReadFile reiht einen Datei-Download ein (Agent lädt die Datei zum Server).
+func (s *Server) handleViewerReadFile(w http.ResponseWriter, r *http.Request) {
+	devID, ok := s.viewerFileAuth(w, r)
+	if !ok {
+		return
+	}
+	var req struct {
+		Path string `json:"path"`
+	}
+	if !s.decodeJSON(w, r, &req) {
+		return
+	}
+	if req.Path == "" {
+		s.writeErr(w, http.StatusBadRequest, "pfad fehlt")
+		return
+	}
+	id, err := s.queueCommand(r.Context(), devID, "read_file", "Datei lesen: "+req.Path,
+		map[string]any{"path": req.Path})
+	if err != nil {
+		s.mapStoreErr(w, err)
+		return
+	}
+	s.writeJSON(w, http.StatusCreated, map[string]string{"command_id": id})
+}
+
+// handleViewerWriteFile nimmt Bytes entgegen und reiht das Schreiben ein (Upload).
+func (s *Server) handleViewerWriteFile(w http.ResponseWriter, r *http.Request) {
+	devID, ok := s.viewerFileAuth(w, r)
+	if !ok {
+		return
+	}
+	path := r.URL.Query().Get("path")
+	if path == "" {
+		s.writeErr(w, http.StatusBadRequest, "path fehlt")
+		return
+	}
+	data, err := io.ReadAll(io.LimitReader(r.Body, maxFileTransfer+1))
+	if err != nil || len(data) > maxFileTransfer {
+		s.writeErr(w, http.StatusRequestEntityTooLarge, "Datei zu groß (max 32 MB)")
+		return
+	}
+	xfer := newSessionID()
+	s.files.put(xfer, "", data)
+	id, err := s.queueCommand(r.Context(), devID, "write_file", "Datei schreiben: "+path,
+		map[string]any{"path": path, "xfer": xfer})
+	if err != nil {
+		s.mapStoreErr(w, err)
+		return
+	}
+	s.writeJSON(w, http.StatusCreated, map[string]string{"command_id": id})
+}
+
+// handleViewerMkdir reiht das Anlegen eines Verzeichnisses ein.
+func (s *Server) handleViewerMkdir(w http.ResponseWriter, r *http.Request) {
+	devID, ok := s.viewerFileAuth(w, r)
+	if !ok {
+		return
+	}
+	var req struct {
+		Path string `json:"path"`
+	}
+	if !s.decodeJSON(w, r, &req) {
+		return
+	}
+	if req.Path == "" {
+		s.writeErr(w, http.StatusBadRequest, "pfad fehlt")
+		return
+	}
+	id, err := s.queueCommand(r.Context(), devID, "make_dir", "Ordner anlegen: "+req.Path,
+		map[string]any{"path": req.Path})
+	if err != nil {
+		s.mapStoreErr(w, err)
+		return
+	}
+	s.writeJSON(w, http.StatusCreated, map[string]string{"command_id": id})
+}
+
+// handleViewerDelete reiht das Löschen einer Datei/eines Verzeichnisses ein.
+func (s *Server) handleViewerDelete(w http.ResponseWriter, r *http.Request) {
+	devID, ok := s.viewerFileAuth(w, r)
+	if !ok {
+		return
+	}
+	var req struct {
+		Path string `json:"path"`
+	}
+	if !s.decodeJSON(w, r, &req) {
+		return
+	}
+	if req.Path == "" {
+		s.writeErr(w, http.StatusBadRequest, "pfad fehlt")
+		return
+	}
+	id, err := s.queueCommand(r.Context(), devID, "delete_path", "Löschen: "+req.Path,
+		map[string]any{"path": req.Path})
+	if err != nil {
+		s.mapStoreErr(w, err)
+		return
+	}
+	s.writeJSON(w, http.StatusCreated, map[string]string{"command_id": id})
+}
+
+// handleViewerCommand liefert den Status/Ergebnis eines eingereihten Befehls
+// (Polling), auf das Gerät der Capability beschränkt.
+func (s *Server) handleViewerCommand(w http.ResponseWriter, r *http.Request) {
+	devID, ok := s.viewerFileAuth(w, r)
+	if !ok {
+		return
+	}
+	cmd, err := s.store.CommandByID(r.Context(), chi.URLParam(r, "cmd"))
+	if err != nil {
+		s.mapStoreErr(w, err)
+		return
+	}
+	if cmd.DeviceID != devID {
+		s.writeErr(w, http.StatusForbidden, "fremdes gerät")
+		return
+	}
+	s.writeJSON(w, http.StatusOK, cmd)
+}
+
+// handleViewerBlob streamt die vom Agent hochgeladene Datei an den Viewer.
+func (s *Server) handleViewerBlob(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.viewerFileAuth(w, r); !ok {
+		return
+	}
+	b, ok := s.files.take(chi.URLParam(r, "cmd"))
+	if !ok {
+		s.writeErr(w, http.StatusNotFound, "Datei nicht (mehr) verfügbar")
+		return
+	}
+	w.Header().Set("Content-Type", "application/octet-stream")
+	_, _ = w.Write(b.data)
+}

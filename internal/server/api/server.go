@@ -20,19 +20,20 @@ import (
 
 // Server bündelt Abhängigkeiten der HTTP-Handler.
 type Server struct {
-	store   *store.Store
-	cfg     config.Config
-	log     *slog.Logger
-	webFS   fs.FS    // gebautes React-Frontend (kann nil sein)
-	version string   // Version der eingebetteten Agent-Binaries (für Auto-Update)
-	term    *termHub // flüchtiger Zustand für Remote-Terminal-Sessions
-	files   *fileHub // flüchtige Datei-Übertragungen
-	router  http.Handler
+	store    *store.Store
+	cfg      config.Config
+	log      *slog.Logger
+	webFS    fs.FS       // gebautes React-Frontend (kann nil sein)
+	version  string      // Version der eingebetteten Agent-Binaries (für Auto-Update)
+	term     *termHub    // flüchtiger Zustand für Remote-Terminal-Sessions
+	files    *fileHub    // flüchtige Datei-Übertragungen
+	fileCaps *fileCapHub // Datei-Capabilities des nativen Viewers (Token→Gerät)
+	router   http.Handler
 }
 
 // New erstellt den Server und registriert alle Routen.
 func New(st *store.Store, cfg config.Config, log *slog.Logger, webFS fs.FS, version string) *Server {
-	s := &Server{store: st, cfg: cfg, log: log, webFS: webFS, version: version, term: newTermHub(), files: newFileHub()}
+	s := &Server{store: st, cfg: cfg, log: log, webFS: webFS, version: version, term: newTermHub(), files: newFileHub(), fileCaps: newFileCapHub()}
 	s.router = s.routes()
 	return s
 }
@@ -63,6 +64,15 @@ func (s *Server) routes() http.Handler {
 			// pro-Sitzung erzeugte Viewer-Token (nur ein Admin kann es via
 			// /remote/start erzeugen). Sonst identisch zur Browser-WS.
 			r.Get("/devices/{id}/remote/viewer-ws", s.handleViewerVNC)
+			// Dateimanager im nativen Viewer: dieselbe Command-Queue wie die Web-UI,
+			// aber Auth über die Viewer-Datei-Capability (Token→Gerät, gerätegebunden).
+			r.Post("/devices/{id}/viewer-files/browse", s.handleViewerBrowse)
+			r.Post("/devices/{id}/viewer-files/read", s.handleViewerReadFile)
+			r.Post("/devices/{id}/viewer-files/write", s.handleViewerWriteFile)
+			r.Post("/devices/{id}/viewer-files/mkdir", s.handleViewerMkdir)
+			r.Post("/devices/{id}/viewer-files/delete", s.handleViewerDelete)
+			r.Get("/devices/{id}/viewer-files/command/{cmd}", s.handleViewerCommand)
+			r.Get("/devices/{id}/viewer-files/blob/{cmd}", s.handleViewerBlob)
 		})
 
 		// --- Übrige API mit 30s-Request-Timeout ---
@@ -92,7 +102,7 @@ func (s *Server) routes() http.Handler {
 			// --- Web-API (Session-Cookie) ---
 			r.Group(func(r chi.Router) {
 				r.Use(s.requireUser)
-					r.Use(s.audit) // ändernde Aktionen protokollieren
+				r.Use(s.audit) // ändernde Aktionen protokollieren
 				// Immer erlaubt – auch während der 2FA-Einrichtung:
 				r.Get("/auth/me", s.handleMe)
 				r.Put("/auth/me/theme", s.handleSetTheme)
@@ -105,7 +115,7 @@ func (s *Server) routes() http.Handler {
 				// Restliche Funktionen erst nach abgeschlossener 2FA (bei Pflicht).
 				r.Group(func(r chi.Router) {
 					r.Use(s.requireEnrolled)
-					r.Use(s.scopeDevice) // Daten-Scope für /devices/{id}/… erzwingen
+					r.Use(s.scopeDevice)                // Daten-Scope für /devices/{id}/… erzwingen
 					r.Get("/agents", s.handleAgentList) // harmlose Plattform-Liste
 
 					// --- Übersicht (page.dashboard) ---

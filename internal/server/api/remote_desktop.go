@@ -71,6 +71,10 @@ func (s *Server) handleRemoteStart(w http.ResponseWriter, r *http.Request) {
 		token:     viewerToken,
 	}
 	s.term.addSession(sessID, sess)
+	// Datei-Capability für den nativen Viewer – von der VNC-Session entkoppelt
+	// (die nach remoteSessionTTL aus der Map fliegt), damit der Dateimanager auch
+	// in langen Sitzungen weiterläuft.
+	s.fileCaps.add(viewerToken, deviceID)
 
 	// Sitzung aufräumen, falls die Browser-WS nie kommt (kein Leak).
 	go func() {
