@@ -166,6 +166,16 @@ func RunCaptureHelper(monitor int) {
 					return
 				}
 			}
+		case cmdSetResolution: // w(2 LE) + h(2 LE); 0,0 = native wiederherstellen. Antwort: 1 Byte Ack
+			r := make([]byte, 4)
+			if _, err := io.ReadFull(os.Stdin, r); err != nil {
+				return
+			}
+			// Läuft hier in der Nutzer-Session → ändert wirklich den Konsolen-Bildschirm.
+			setDisplayResolution(int(binary.LittleEndian.Uint16(r[0:])), int(binary.LittleEndian.Uint16(r[2:])))
+			if _, err := os.Stdout.Write([]byte{1}); err != nil { // Ack (Sync-Punkt)
+				return
+			}
 		default:
 			return
 		}
@@ -173,12 +183,13 @@ func RunCaptureHelper(monitor int) {
 }
 
 const (
-	cmdCapture      = 1
-	cmdPointer      = 2
-	cmdKey          = 3
-	cmdGetClipboard = 4
-	cmdSetClipboard = 5
-	cmdBlockInput   = 6
+	cmdCapture       = 1
+	cmdPointer       = 2
+	cmdKey           = 3
+	cmdGetClipboard  = 4
+	cmdSetClipboard  = 5
+	cmdBlockInput    = 6
+	cmdSetResolution = 7
 )
 
 type helperSource struct {
@@ -314,6 +325,28 @@ func (h *helperSource) Key(down bool, keysym uint32) {
 	}
 	binary.LittleEndian.PutUint32(b[2:], keysym)
 	_, _ = h.stdinW.Write(b)
+}
+
+// SetResolution weist den Helfer an, die Bildschirmauflösung in der Nutzer-Session
+// anzupassen (w<=0 = native). Synchron: wartet auf das Ack, damit die Umstellung
+// wirklich erfolgt ist, bevor der Aufrufer fortfährt (z.B. vor dem Helfer-Kill beim
+// Wiederherstellen). Nach der Umstellung beendet sich der Helfer bei der nächsten
+// Aufnahme selbst (Größen-Mismatch) → resilientSource baut mit neuer Größe neu auf.
+func (h *helperSource) SetResolution(w, h2 int) {
+	if w < 0 {
+		w = 0
+	}
+	if h2 < 0 {
+		h2 = 0
+	}
+	b := []byte{cmdSetResolution, 0, 0, 0, 0}
+	binary.LittleEndian.PutUint16(b[1:], uint16(w))
+	binary.LittleEndian.PutUint16(b[3:], uint16(h2))
+	if _, err := h.stdinW.Write(b); err != nil {
+		return
+	}
+	ack := make([]byte, 1)
+	_, _ = io.ReadFull(h.stdoutR, ack)
 }
 
 // BlockInput weist den Helfer an, lokale Eingaben in der Sitzung zu (ent)sperren.

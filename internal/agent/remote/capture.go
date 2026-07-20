@@ -84,6 +84,15 @@ func (r *resilientSource) BlockInput(on bool) {
 	}
 }
 
+// SetResolution leitet den Auflösungswunsch an die innere Quelle weiter (Helfer:
+// führt es in der Nutzer-Session aus; interaktiv: direkt). Nach der Umstellung
+// meldet die nächste Capture eine abweichende Größe → Neuaufbau mit neuer Bounds.
+func (r *resilientSource) SetResolution(w, h int) {
+	if rs, ok := r.inner.(resolutionSetter); ok {
+		rs.SetResolution(w, h)
+	}
+}
+
 func (r *resilientSource) Close() error {
 	if r.inner != nil {
 		return r.inner.Close()

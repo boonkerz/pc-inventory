@@ -80,7 +80,7 @@ func rfbPixelFormat() []byte {
 	}
 }
 
-func rfbServe(ctx context.Context, conn io.ReadWriter, src screenSource, res resController, log *slog.Logger) error {
+func rfbServe(ctx context.Context, conn io.ReadWriter, src screenSource, log *slog.Logger) error {
 	w, h := src.Bounds()
 
 	// 1. ProtocolVersion
@@ -258,8 +258,10 @@ func rfbServe(ctx context.Context, conn io.ReadWriter, src screenSource, res res
 				if _, err := io.ReadFull(conn, b); err != nil {
 					return err
 				}
-				if res != nil {
-					res.Set(int(binary.BigEndian.Uint16(b[0:])), int(binary.BigEndian.Uint16(b[2:])))
+				// Die Umstellung muss in der Nutzer-Session laufen (Session-0-Isolation) –
+				// deshalb über die Bildschirmquelle (Helfer/interaktiv), nicht hier im Dienst.
+				if rs, ok := src.(resolutionSetter); ok {
+					rs.SetResolution(int(binary.BigEndian.Uint16(b[0:])), int(binary.BigEndian.Uint16(b[2:])))
 				}
 			default:
 				return fmt.Errorf("unbekannter Steuerbefehl %d", sub[0])

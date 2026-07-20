@@ -17,7 +17,7 @@ func TestRFBServeHandshakeAndFrame(t *testing.T) {
 	defer cli.Close()
 
 	go func() {
-		_ = rfbServe(context.Background(), srv, newSyntheticSource(), nil, slog.Default())
+		_ = rfbServe(context.Background(), srv, newSyntheticSource(), slog.Default())
 		srv.Close()
 	}()
 
@@ -90,7 +90,7 @@ func TestRFBTightJPEG(t *testing.T) {
 	srv, cli := net.Pipe()
 	defer cli.Close()
 	go func() {
-		_ = rfbServe(context.Background(), srv, newSyntheticSource(), nil, slog.Default())
+		_ = rfbServe(context.Background(), srv, newSyntheticSource(), slog.Default())
 		srv.Close()
 	}()
 

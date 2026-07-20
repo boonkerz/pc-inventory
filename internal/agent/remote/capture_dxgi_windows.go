@@ -208,6 +208,7 @@ func (s *dxgiSource) Capture() ([]byte, error) {
 
 func (s *dxgiSource) Pointer(mask, x, y int)       { pointerEvent(&s.prevMask, mask, x, y, 0, 0) }
 func (s *dxgiSource) Key(down bool, keysym uint32) { keyEvent(down, keysym) }
+func (s *dxgiSource) SetResolution(w, h int)       { setDisplayResolution(w, h) }
 
 func (s *dxgiSource) Close() error {
 	comRelease(s.dupl)

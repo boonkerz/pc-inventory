@@ -3,11 +3,8 @@
 package remote
 
 import (
-	"fmt"
 	"syscall"
 	"unsafe"
-
-	"log/slog"
 )
 
 // Adaptive Auflösung unter Windows: die physische Bildschirmauflösung des
@@ -22,10 +19,9 @@ var (
 )
 
 const (
-	enumCurrentSettings  = 0xFFFFFFFF
-	dmPelsWidthFlag      = 0x00080000
-	dmPelsHeightFlag     = 0x00100000
-	dispChangeSuccessful = 0
+	enumCurrentSettings = 0xFFFFFFFF
+	dmPelsWidthFlag     = 0x00080000
+	dmPelsHeightFlag    = 0x00100000
 )
 
 // devmodeWres spiegelt DEVMODEW (Display-Variante). Reihenfolge/Größe müssen exakt
@@ -69,61 +65,35 @@ func enumDisplaySettingsRes(mode uint32, dm *devmodeWres) bool {
 	return r != 0
 }
 
-type winResController struct {
-	log     *slog.Logger
-	changed bool // haben wir die Auflösung umgestellt (dann Restore nötig)?
-	curW    int
-	curH    int
-}
-
-func newResController(log *slog.Logger) resController { return &winResController{log: log} }
-
-// Set stellt den zum gewünschten (Fenster-)Format am besten passenden vom Treiber
-// angebotenen Modus ein. w<=0||h<=0 stellt die ursprüngliche Auflösung wieder her.
-func (c *winResController) Set(w, h int) {
+// setDisplayResolution stellt den zum gewünschten (Fenster-)Format am besten
+// passenden angebotenen Modus ein bzw. – bei w<=0||h<=0 – die native (Registry-
+// Standard-)Auflösung wieder her. Zustandslos: die Wiederherstellung geht über ein
+// NULL-DEVMODE, weil wir die Umstellung dynamisch (nicht persistent) vornehmen; der
+// Registry-Standard bleibt also die Ausgangsauflösung. MUSS in der Nutzer-Session
+// laufen (der Aufnahme-Helfer ruft das auf), sonst ändert sich nichts.
+func setDisplayResolution(w, h int) {
 	if w <= 0 || h <= 0 {
-		c.Restore()
+		// NULL-DEVMODE → Rückkehr zum in der Registry gespeicherten Standardmodus.
+		procChangeDisplaySettingsExW.Call(0, 0, 0, 0, 0)
 		return
 	}
 	tw, th, ok := closestMode(w, h)
 	if !ok {
 		return
 	}
-	if c.changed && tw == c.curW && th == c.curH {
-		return // schon in dieser Auflösung
-	}
 	// Aktuelle Einstellungen als Basis lesen (setzt dmSize u. a. Felder korrekt).
 	var dm devmodeWres
 	if !enumDisplaySettingsRes(enumCurrentSettings, &dm) {
 		return
 	}
-	if !c.changed && int(dm.dmPelsWidth) == tw && int(dm.dmPelsHeight) == th {
-		return // native Auflösung passt bereits – nichts umstellen
+	if int(dm.dmPelsWidth) == tw && int(dm.dmPelsHeight) == th {
+		return // passt bereits – nichts umstellen
 	}
 	dm.dmPelsWidth = uint32(tw)
 	dm.dmPelsHeight = uint32(th)
 	dm.dmFields = dmPelsWidthFlag | dmPelsHeightFlag
 	// dwFlags=0 → dynamische (nicht-persistente) Umstellung; Restore via NULL-DEVMODE.
-	r, _, _ := procChangeDisplaySettingsExW.Call(0, uintptr(unsafe.Pointer(&dm)), 0, 0, 0)
-	if int32(r) == dispChangeSuccessful {
-		c.changed = true
-		c.curW, c.curH = tw, th
-		c.log.Info("adaptive auflösung gesetzt", "size", fmt.Sprintf("%dx%d", tw, th))
-		return
-	}
-	c.log.Warn("adaptive auflösung abgelehnt", "size", fmt.Sprintf("%dx%d", tw, th), "code", int32(r))
-}
-
-// Restore setzt die vor der Sitzung aktive (Registry-Standard-)Auflösung zurück.
-func (c *winResController) Restore() {
-	if !c.changed {
-		return
-	}
-	// NULL-DEVMODE → Rückkehr zum in der Registry gespeicherten Standardmodus.
-	procChangeDisplaySettingsExW.Call(0, 0, 0, 0, 0)
-	c.changed = false
-	c.curW, c.curH = 0, 0
-	c.log.Info("auflösung zurückgesetzt")
+	procChangeDisplaySettingsExW.Call(0, uintptr(unsafe.Pointer(&dm)), 0, 0, 0)
 }
 
 // closestMode enumeriert die vom Treiber angebotenen Modi und wählt den best-

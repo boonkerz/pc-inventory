@@ -11,13 +11,12 @@ import (
 	"github.com/boonkerz/roster/internal/agent/transport"
 )
 
-// resController ändert die physische Bildschirmauflösung des Geräts für die Dauer
-// einer Fernsteuerungs-Sitzung (adaptive Auflösung: der Viewer bittet um eine zum
-// Fenster passende Größe) und stellt beim Sitzungsende die ursprüngliche wieder her.
-// Nur Windows setzt das echt um; sonst No-op (siehe resolution_*.go).
-type resController interface {
-	Set(w, h int) // gewünschte Größe; w<=0||h<=0 = nativ wiederherstellen
-	Restore()     // ursprüngliche Auflösung zurücksetzen (Sitzungsende)
+// resolutionSetter wird von Bildschirmquellen implementiert, die die physische
+// Auflösung des Geräts anpassen können (adaptive Auflösung). Die Umstellung MUSS in
+// der Nutzer-Session laufen (Session-0-Isolation), daher als Quellen-Fähigkeit über
+// den Aufnahme-Helfer geroutet (Windows). w<=0||h<=0 = ursprüngliche wiederherstellen.
+type resolutionSetter interface {
+	SetResolution(w, h int)
 }
 
 // handleVNC bedient eine Fernsteuerungs-Sitzung: der Agent ist selbst der VNC-Server.
@@ -47,15 +46,15 @@ func handleVNC(ctx context.Context, client *transport.Client, agentToken, sessio
 	}
 	defer src.Close()
 
-	// Adaptive Auflösung: der Viewer kann eine zum Fenster passende Bildschirmgröße
-	// anfordern; beim Sitzungsende wird die ursprüngliche wiederhergestellt.
-	res := newResController(log)
-	defer res.Restore()
+	// Adaptive Auflösung: beim Sitzungsende die native Auflösung wiederherstellen
+	// (läuft VOR src.Close, solange der Helfer noch lebt). resilientSource leitet an
+	// die innere Quelle weiter bzw. macht No-op, wenn sie es nicht kann.
+	defer src.SetResolution(0, 0)
 
 	w, h := src.Bounds()
 	log.Info("fernsteuerung: rfb-server startet", "size", fmt.Sprintf("%dx%d", w, h))
 	nc := websocket.NetConn(ctx, conn, websocket.MessageBinary)
-	if err := rfbServe(ctx, nc, src, res, log); err != nil && ctx.Err() == nil {
+	if err := rfbServe(ctx, nc, src, log); err != nil && ctx.Err() == nil {
 		log.Debug("rfb-server beendet", "err", err)
 	}
 	conn.Close(websocket.StatusNormalClosure, "ende")

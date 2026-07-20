@@ -298,6 +298,7 @@ func runSession(cfg *launchConfig) error {
 		if avail < 1 {
 			avail = int(ph)
 		}
+		log.Printf("adaptive auflösung → gerät: %dx%d (fenster %dx%d px)", int(pw), avail, pw, ph)
 		_ = rc.controlResolution(int(pw), avail)
 	}
 

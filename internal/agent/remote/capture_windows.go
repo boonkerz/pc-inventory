@@ -173,3 +173,5 @@ func (s *gdiSource) Close() error {
 	}
 	return nil
 }
+
+func (s *gdiSource) SetResolution(w, h int) { setDisplayResolution(w, h) }
