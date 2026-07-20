@@ -215,7 +215,19 @@ func runSession(cfg *launchConfig) error {
 	defer sdl.DestroyRenderer(renderer)
 	sdl.SetRenderDrawBlendMode(renderer, sdl.BlendModeBlend) // für die halbtransparente Leiste
 
-	txt, err := newTextRenderer(renderer, 15)
+	// HiDPI: Font + Leisten-Maße mit dem Display-Scale hochskalieren, sonst wirkt
+	// die Schrift auf hochauflösenden Monitoren (Wayland/fraktionale Skalierung) winzig.
+	uiScale := sdl.GetWindowDisplayScale(window)
+	if uiScale < 1 { // Wayland: direkt nach CreateWindow ggf. noch 0 → Display-Scale
+		uiScale = sdl.GetDisplayContentScale(sdl.GetPrimaryDisplay())
+	}
+	if uiScale < 1 {
+		uiScale = 1
+	}
+	applyUIScale(uiScale)
+	log.Printf("ui-skalierung: %.2f", uiScale)
+
+	txt, err := newTextRenderer(renderer, float64(15*uiScale))
 	if err != nil {
 		return fmt.Errorf("font: %w", err)
 	}
@@ -246,6 +258,7 @@ func runSession(cfg *launchConfig) error {
 	tb := newToolbar(txt)
 	v := &viewer{rc: rc}
 	fm := newFileManager(txt, cfg)
+	fm.scale = uiScale
 	fullscreen, locked, uiDirty := false, false, false
 	quality := byte(1)
 	qName := []string{"N", "M", "H"}
@@ -264,6 +277,28 @@ func runSession(cfg *launchConfig) error {
 				_ = rc.clientCutText(cur)
 			}
 		}
+	}
+
+	// Adaptive Auflösung: bittet das Gerät, seine Bildschirmauflösung an die
+	// verfügbare Fensterfläche (unter der Bedienleiste) anzupassen – so verschwinden
+	// die schwarzen Ränder. resDirty+resAt entprellen Fenstergrößen-Änderungen.
+	adaptRes := false
+	resDirty := false
+	var resAt time.Time
+	sendAdaptRes := func() {
+		var pw, ph, lw, lh int32
+		sdl.GetWindowSizeInPixels(window, &pw, &ph)
+		sdl.GetWindowSize(window, &lw, &lh)
+		if pw <= 0 || ph <= 0 || lh <= 0 {
+			return
+		}
+		// Ziel = verfügbare Fläche in Pixeln (Höhe abzüglich der Leiste, proportional –
+		// unabhängig von der HiDPI-Koordinatenskalierung).
+		avail := int(ph) * int(lh-int32(barHeight)) / int(lh)
+		if avail < 1 {
+			avail = int(ph)
+		}
+		_ = rc.controlResolution(int(pw), avail)
 	}
 
 	doAction := func(id string) {
@@ -298,6 +333,15 @@ func runSession(cfg *launchConfig) error {
 			quality = (quality + 1) % 3
 			_ = rc.controlQuality(quality)
 			tb.setLabel("qual", "Qualität: "+qName[quality])
+		case "res":
+			adaptRes = !adaptRes
+			if adaptRes {
+				tb.setLabel("res", "Auflösung: Auto")
+				sendAdaptRes()
+			} else {
+				tb.setLabel("res", "Auflösung: Nativ")
+				_ = rc.controlResolution(0, 0) // native Auflösung wiederherstellen
+			}
 		case "full":
 			fullscreen = !fullscreen
 			sdl.SetWindowFullscreen(window, fullscreen)
@@ -320,6 +364,12 @@ func runSession(cfg *launchConfig) error {
 				// Der Nutzer wechselt zum Viewer, um einzufügen – lokale Ablage
 				// jetzt sicher ans Gerät schieben (Wayland liefert sie erst bei Fokus).
 				pushClip()
+			case sdl.EventWindowResized, sdl.EventWindowPixelSizeChanged:
+				// Bei adaptiver Auflösung die neue Fenstergröße (entprellt) ans Gerät melden.
+				if adaptRes {
+					resDirty = true
+					resAt = time.Now()
+				}
 			case sdl.EventKeyDown, sdl.EventKeyUp:
 				down := ev.Type() == sdl.EventKeyDown
 				ke := ev.Key()
@@ -457,6 +507,13 @@ func runSession(cfg *launchConfig) error {
 		if time.Since(lastClipPoll) > 500*time.Millisecond {
 			lastClipPoll = time.Now()
 			pushClip()
+		}
+
+		// Entprelltes Melden einer neuen Fenstergröße (adaptive Auflösung), damit
+		// nicht bei jedem Zwischenschritt des Ziehens die Geräte-Auflösung umschaltet.
+		if resDirty && time.Since(resAt) > 350*time.Millisecond {
+			resDirty = false
+			sendAdaptRes()
 		}
 
 		if painted || uiDirty || fm.active || hoverID != lastHover {

@@ -53,6 +53,7 @@ type fileManager struct {
 	rn     *sdl.Renderer
 	cl     *fmClient
 	active bool
+	scale  float32 // UI-Skalierung (HiDPI); 1.0 = normal
 
 	mu     sync.Mutex
 	local  fmPane
@@ -71,9 +72,10 @@ type fileManager struct {
 
 func newFileManager(txt *textRenderer, cfg *launchConfig) *fileManager {
 	fm := &fileManager{
-		txt: txt,
-		rn:  txt.renderer,
-		cl:  newFMClient(cfg),
+		txt:   txt,
+		rn:    txt.renderer,
+		cl:    newFMClient(cfg),
+		scale: 1,
 	}
 	fm.local.remote = false
 	fm.remote.remote = true

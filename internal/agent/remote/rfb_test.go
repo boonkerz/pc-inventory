@@ -17,7 +17,7 @@ func TestRFBServeHandshakeAndFrame(t *testing.T) {
 	defer cli.Close()
 
 	go func() {
-		_ = rfbServe(context.Background(), srv, newSyntheticSource(), slog.Default())
+		_ = rfbServe(context.Background(), srv, newSyntheticSource(), nil, slog.Default())
 		srv.Close()
 	}()
 
@@ -89,7 +89,10 @@ func TestRFBServeHandshakeAndFrame(t *testing.T) {
 func TestRFBTightJPEG(t *testing.T) {
 	srv, cli := net.Pipe()
 	defer cli.Close()
-	go func() { _ = rfbServe(context.Background(), srv, newSyntheticSource(), slog.Default()); srv.Close() }()
+	go func() {
+		_ = rfbServe(context.Background(), srv, newSyntheticSource(), nil, slog.Default())
+		srv.Close()
+	}()
 
 	_ = cli.SetDeadline(time.Now().Add(5 * time.Second))
 	rd := func(n int) []byte { b := make([]byte, n); io.ReadFull(cli, b); return b }

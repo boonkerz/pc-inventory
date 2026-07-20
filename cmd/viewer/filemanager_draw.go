@@ -26,17 +26,21 @@ func (fm *fileManager) draw(winW, winH float32) {
 	fm.mu.Lock()
 	defer fm.mu.Unlock()
 
+	s := fm.scale
+	if s < 1 {
+		s = 1
+	}
 	lh := fm.txt.lineH()
-	rowH := lh + 6
+	rowH := lh + 6*s
 	fm.rowH = rowH
 
-	top := barHeight + 6
-	pad := float32(8)
-	gap := float32(8)
-	footerH := lh + 14
+	top := barHeight + 6*s
+	pad := 8 * s
+	gap := 8 * s
+	footerH := lh + 14*s
 	colW := (winW - 2*pad - gap) / 2
 	fm.colW = colW
-	headerH := lh + 10
+	headerH := lh + 10*s
 	listY := top + headerH
 	fm.listY = listY
 	listH := winH - listY - footerH - pad
@@ -61,7 +65,7 @@ func (fm *fileManager) draw(winW, winH float32) {
 		}
 		fm.fill(x, top, colW, headerH, hc)
 		title := paneTitle(p)
-		fm.txt.draw(clip(fm.txt, title, colW-16), x+8, top+5, fmWhite[0], fmWhite[1], fmWhite[2])
+		fm.txt.draw(clip(fm.txt, title, colW-16*s), x+8*s, top+5*s, fmWhite[0], fmWhite[1], fmWhite[2])
 
 		// Auswahl in den sichtbaren Bereich scrollen.
 		if p.sel < p.top {
@@ -75,11 +79,11 @@ func (fm *fileManager) draw(winW, winH float32) {
 		}
 
 		if p.loading {
-			fm.txt.draw("… lädt", x+8, listY+4, fmMuted[0], fmMuted[1], fmMuted[2])
+			fm.txt.draw("… lädt", x+8*s, listY+4*s, fmMuted[0], fmMuted[1], fmMuted[2])
 			continue
 		}
 		if p.err != "" {
-			fm.txt.draw(clip(fm.txt, "Fehler: "+p.err, colW-16), x+8, listY+4, 0xff, 0x8f, 0x8f)
+			fm.txt.draw(clip(fm.txt, "Fehler: "+p.err, colW-16*s), x+8*s, listY+4*s, 0xff, 0x8f, 0x8f)
 			continue
 		}
 		for r := 0; r < visRows; r++ {
@@ -94,7 +98,7 @@ func (fm *fileManager) draw(winW, winH float32) {
 				if focused {
 					sc = fmSelF
 				}
-				fm.fill(x+2, ry, colW-4, rowH, sc)
+				fm.fill(x+2*s, ry, colW-4*s, rowH, sc)
 			}
 			col := fmFile
 			name := e.name
@@ -110,10 +114,10 @@ func (fm *fileManager) draw(winW, winH float32) {
 				sizeStr = humanSize(e.size)
 			}
 			sw := fm.txt.width(sizeStr)
-			nameMax := colW - 20 - sw
-			fm.txt.draw(clip(fm.txt, name, nameMax), x+8, ry+3, col[0], col[1], col[2])
+			nameMax := colW - 20*s - sw
+			fm.txt.draw(clip(fm.txt, name, nameMax), x+8*s, ry+3*s, col[0], col[1], col[2])
 			if sizeStr != "" {
-				fm.txt.draw(sizeStr, x+colW-8-sw, ry+3, fmMuted[0], fmMuted[1], fmMuted[2])
+				fm.txt.draw(sizeStr, x+colW-8*s-sw, ry+3*s, fmMuted[0], fmMuted[1], fmMuted[2])
 			}
 		}
 	}
@@ -134,7 +138,7 @@ func (fm *fileManager) draw(winW, winH float32) {
 		msg = fm.status
 		col = fmWhite
 	}
-	fm.txt.draw(clip(fm.txt, msg, winW-16), 8, fy+7, col[0], col[1], col[2])
+	fm.txt.draw(clip(fm.txt, msg, winW-16*s), 8*s, fy+7*s, col[0], col[1], col[2])
 }
 
 func paneTitle(p *fmPane) string {

@@ -139,11 +139,12 @@ func (c *rfbClient) keyEvent(down bool, keysym uint32) error {
 // Roster-Steuerkanal: eigener RFB-Client->Server-Nachrichtentyp 250 mit
 // Subcommands (der Agent-RFB-Server behandelt sie; noVNC nutzt sie nicht).
 const (
-	ctrlMsgType = 250
-	ctrlSAS     = 1 // Strg+Alt+Entf (echte Secure Attention Sequence)
-	ctrlBlock   = 2 // Eingaben am Gerät sperren (1=an,0=aus)
-	ctrlMessage = 3 // Meldung am Gerät anzeigen (4-Byte-Länge + UTF-8)
-	ctrlQuality = 4 // Qualitätsstufe (0=niedrig,1=mittel,2=hoch)
+	ctrlMsgType    = 250
+	ctrlSAS        = 1 // Strg+Alt+Entf (echte Secure Attention Sequence)
+	ctrlBlock      = 2 // Eingaben am Gerät sperren (1=an,0=aus)
+	ctrlMessage    = 3 // Meldung am Gerät anzeigen (4-Byte-Länge + UTF-8)
+	ctrlQuality    = 4 // Qualitätsstufe (0=niedrig,1=mittel,2=hoch)
+	ctrlResolution = 5 // adaptive Auflösung: gewünschte Größe w(2)+h(2); 0,0 = nativ
 )
 
 func (c *rfbClient) controlSAS() error { return c.write([]byte{ctrlMsgType, ctrlSAS}) }
@@ -164,6 +165,18 @@ func (c *rfbClient) controlMessage(text string) error {
 
 func (c *rfbClient) controlQuality(level byte) error {
 	return c.write([]byte{ctrlMsgType, ctrlQuality, level})
+}
+
+// controlResolution bittet das Gerät, seine Bildschirmauflösung an die gewünschte
+// (Fenster-)Größe anzupassen. w=0,h=0 stellt die ursprüngliche Auflösung wieder her.
+func (c *rfbClient) controlResolution(w, h int) error {
+	if w < 0 {
+		w = 0
+	}
+	if h < 0 {
+		h = 0
+	}
+	return c.write([]byte{ctrlMsgType, ctrlResolution, byte(w >> 8), byte(w), byte(h >> 8), byte(h)})
 }
 
 // clientCutText sendet die lokale Zwischenablage ans Gerät (RFB ClientCutText,

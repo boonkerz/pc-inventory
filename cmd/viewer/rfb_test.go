@@ -180,6 +180,28 @@ func TestDecodeLaunchCode(t *testing.T) {
 	}
 }
 
+func TestControlResolution(t *testing.T) {
+	cases := []struct {
+		w, h int
+		want []byte
+	}{
+		{1920, 1080, []byte{ctrlMsgType, ctrlResolution, 0x07, 0x80, 0x04, 0x38}},
+		{2560, 1440, []byte{ctrlMsgType, ctrlResolution, 0x0a, 0x00, 0x05, 0xa0}},
+		{0, 0, []byte{ctrlMsgType, ctrlResolution, 0, 0, 0, 0}},   // nativ
+		{-5, -1, []byte{ctrlMsgType, ctrlResolution, 0, 0, 0, 0}}, // negativ -> 0
+	}
+	for _, c := range cases {
+		var buf bytes.Buffer
+		rc := &rfbClient{w: &buf}
+		if err := rc.controlResolution(c.w, c.h); err != nil {
+			t.Fatalf("controlResolution(%d,%d): %v", c.w, c.h, err)
+		}
+		if !bytes.Equal(buf.Bytes(), c.want) {
+			t.Errorf("controlResolution(%d,%d) = %v, want %v", c.w, c.h, buf.Bytes(), c.want)
+		}
+	}
+}
+
 func TestWsBase(t *testing.T) {
 	cases := map[string]string{
 		"https://x.de":     "wss://x.de",

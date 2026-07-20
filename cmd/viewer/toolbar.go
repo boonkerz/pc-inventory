@@ -10,12 +10,23 @@ import (
 // Das Remote-Bild wird darunter gerendert (barHeight reserviert). Scharfer Text via
 // textRenderer (Go-Font), Hover-Highlights, Akzentfarben.
 
-const (
+// Leisten-Maße (Basiswerte bei UI-Skalierung 1.0; applyUIScale multipliziert sie
+// für HiDPI-Displays).
+var (
 	barHeight float32 = 44 // reservierter Streifen oben
 	pillY     float32 = 6
 	pillH     float32 = 32
 	btnPadX   float32 = 14
 )
+
+// applyUIScale skaliert die Leisten-Maße einmalig für HiDPI (Faktor aus dem
+// Display-Scale). Der Text skaliert separat über die Font-Größe.
+func applyUIScale(s float32) {
+	barHeight *= s
+	pillY *= s
+	pillH *= s
+	btnPadX *= s
+}
 
 type button struct {
 	id, label string
@@ -39,6 +50,7 @@ func newToolbar(txt *textRenderer) *toolbar {
 		{id: "msg", label: "Meldung"},
 		{id: "files", label: "Dateien"},
 		{id: "qual", label: "Qualität: M"},
+		{id: "res", label: "Auflösung: Nativ"},
 		{id: "full", label: "Vollbild"},
 		{id: "disc", label: "Trennen", accent: 1},
 	}}
