@@ -51,6 +51,9 @@ func inSession0() bool {
 // Desktop, normaler Desktop) und liefert Frames über stdin/stdout an den Dienst.
 // Protokoll: 8-Byte-Header (w,h LE), dann je Kommando (capture/pointer/key).
 func RunCaptureHelper(monitor int) {
+	// DPI-aware, BEVOR Aufnahme/Metriken genutzt werden: sonst driften bei >100%
+	// Skalierung die physischen DXGI-Pixel und die (virtualisierten) Maus-Metriken.
+	setProcessDPIAware()
 	// Desktop-Zuordnung gilt pro Thread → an einen OS-Thread binden.
 	runtime.LockOSThread()
 	discard := slog.New(slog.NewTextHandler(io.Discard, nil))
