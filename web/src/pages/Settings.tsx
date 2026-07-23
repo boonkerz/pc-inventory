@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "../api";
 import { useI18n } from "../i18n";
 import { useAuth } from "../auth";
-import type { AlertChannel, AlertProvider, AlertsResponse, AuditEntry, ChannelScope, ClientTree, CustomField, CustomFieldType, CustomRole, DeployPackage, Device, EnrollmentToken, MaintenanceWindow, ReportSchedule, User } from "../types";
+import type { AlertChannel, AlertProvider, AlertsResponse, AuditEntry, ChannelScope, ClientTree, CustomField, CustomFieldType, CustomRole, DeployPackage, Device, EnrollmentToken, MaintenanceWindow, ProxmoxGuest, ProxmoxHost, ReportSchedule, User } from "../types";
 
 // SettingsArea sind die Bereiche der (nach Themen gegliederten) Einstellungen.
 export type SettingsArea = "users" | "notify" | "devices" | "security";
@@ -17,7 +17,7 @@ function useSettingsAreas() {
     { key: "notify" as const, label: t("Benachrichtigungen"), adminOnly: false,
       render: () => <><Alerts /><Reports /></> },
     { key: "devices" as const, label: t("Geräte-Verwaltung"), adminOnly: false,
-      render: () => <><Maintenance /><CustomFields /><SoftwarePackages /></> },
+      render: () => <><Maintenance /><CustomFields /><SoftwarePackages /><Proxmox /></> },
     { key: "security" as const, label: t("Sicherheit & Protokoll"), adminOnly: false,
       render: () => <><TwoFactor /><AuditLog /></> },
   ];
@@ -46,6 +46,86 @@ export function Settings({ initialArea }: { initialArea?: SettingsArea }) {
         </nav>
         <div className="settings-content">{current?.render()}</div>
       </div>
+    </div>
+  );
+}
+
+// Proxmox verwaltet Proxmox-VE-Hosts (API-Token) und zeigt deren Gäste mit
+// Reboot-Knopf. Zugangsdaten bleiben serverseitig.
+function Proxmox() {
+  const { t } = useI18n();
+  const qc = useQueryClient();
+  const { data: hosts } = useQuery({ queryKey: ["proxmox-hosts"], queryFn: () => api.get<ProxmoxHost[]>("/proxmox/hosts") });
+  const [name, setName] = useState("");
+  const [url, setUrl] = useState("");
+  const [tokenId, setTokenId] = useState("");
+  const [secret, setSecret] = useState("");
+  const [verify, setVerify] = useState(false);
+  const [openHost, setOpenHost] = useState<string | null>(null);
+  const [err, setErr] = useState("");
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["proxmox-hosts"] });
+
+  const add = useMutation({
+    mutationFn: () => api.post("/proxmox/hosts", { name, base_url: url.trim(), token_id: tokenId.trim(), token_secret: secret.trim(), verify_tls: verify }),
+    onSuccess: () => { setName(""); setUrl(""); setTokenId(""); setSecret(""); setVerify(false); setErr(""); invalidate(); },
+    onError: (e) => setErr(e instanceof ApiError ? e.message : String(e)),
+  });
+  const del = useMutation({ mutationFn: (id: string) => api.del(`/proxmox/hosts/${id}`), onSuccess: invalidate });
+
+  return (
+    <section className="card">
+      <h2>Proxmox</h2>
+      <p className="muted small">{t("Proxmox-VE-Hosts für Reboot-Aktionen und Check-Remediation. API-Token unter Datacenter → Permissions → API Tokens anlegen.")}</p>
+      {(hosts ?? []).map((h) => (
+        <div key={h.id}>
+          <div className="list-row">
+            <span className="link-strong">{h.name || h.base_url}</span>
+            <span className="muted small">{h.base_url} · {h.token_id} · {h.verify_tls ? t("TLS geprüft") : t("TLS ungeprüft")}</span>
+            <button className="btn ghost sm" onClick={() => setOpenHost(openHost === h.id ? null : h.id)}>{t("Gäste")}</button>
+            <button className="btn danger sm" onClick={() => confirm(t("Host löschen?")) && del.mutate(h.id)}>×</button>
+          </div>
+          {openHost === h.id && <ProxmoxGuests hostId={h.id} />}
+        </div>
+      ))}
+      <form className="inline-form" style={{ marginTop: 10 }} onSubmit={(e) => { e.preventDefault(); add.mutate(); }}>
+        <input placeholder={t("Name")} value={name} onChange={(e) => setName(e.target.value)} />
+        <input placeholder="https://pve.local:8006" value={url} onChange={(e) => setUrl(e.target.value)} style={{ minWidth: 190 }} />
+        <input placeholder="user@pam!tokenname" value={tokenId} onChange={(e) => setTokenId(e.target.value)} style={{ minWidth: 170 }} />
+        <input placeholder={t("Token-Secret")} value={secret} onChange={(e) => setSecret(e.target.value)} type="password" style={{ minWidth: 160 }} />
+        <label className="check-inline" title={t("Nur aktivieren, wenn Proxmox ein gültiges Zertifikat hat.")}>
+          <input type="checkbox" checked={verify} onChange={(e) => setVerify(e.target.checked)} /> {t("TLS prüfen")}
+        </label>
+        <button className="btn primary" type="submit">+ {t("Host")}</button>
+      </form>
+      {err && <p className="error small">{err}</p>}
+    </section>
+  );
+}
+
+// ProxmoxGuests listet die Gäste eines Hosts (live abgefragt) mit Reboot-Knopf.
+function ProxmoxGuests({ hostId }: { hostId: string }) {
+  const { t } = useI18n();
+  const { data: guests, isLoading, error } = useQuery({
+    queryKey: ["proxmox-guests", hostId],
+    queryFn: () => api.get<ProxmoxGuest[]>(`/proxmox/hosts/${hostId}/guests`),
+    retry: false,
+  });
+  const reboot = useMutation({
+    mutationFn: (g: ProxmoxGuest) => api.post(`/proxmox/hosts/${hostId}/reboot`, { node: g.node, type: g.type, vmid: g.vmid }),
+  });
+  if (isLoading) return <p className="muted small" style={{ paddingLeft: 12 }}>… {t("lädt")}</p>;
+  if (error) return <p className="error small" style={{ paddingLeft: 12 }}>{error instanceof ApiError ? error.message : String(error)}</p>;
+  return (
+    <div style={{ paddingLeft: 12 }}>
+      {(guests ?? []).map((g) => (
+        <div key={`${g.type}-${g.vmid}`} className="list-row">
+          <span>{g.type === "lxc" ? "📦" : "🖥"} {g.vmid} {g.name}</span>
+          <span className="muted small">{g.node} · {g.status}</span>
+          <button className="btn ghost sm" disabled={reboot.isPending}
+            onClick={() => confirm(t("Diesen Gast rebooten?")) && reboot.mutate(g)}>{t("Reboot")}</button>
+        </div>
+      ))}
+      {(guests ?? []).length === 0 && <p className="muted small">{t("Keine Gäste gefunden.")}</p>}
     </div>
   );
 }

@@ -122,13 +122,14 @@ func (s *Server) handleDeletePolicy(w http.ResponseWriter, r *http.Request) {
 }
 
 type checkRequest struct {
-	Name                string         `json:"name"`
-	Type                string         `json:"type"`
-	Config              map[string]any `json:"config"`
-	ScriptID            *string        `json:"script_id"`
-	Severity            string         `json:"severity"`
-	Frequency           string         `json:"frequency"`
-	RemediationScriptID *string        `json:"remediation_script_id"`
+	Name                string                    `json:"name"`
+	Type                string                    `json:"type"`
+	Config              map[string]any            `json:"config"`
+	ScriptID            *string                   `json:"script_id"`
+	Severity            string                    `json:"severity"`
+	Frequency           string                    `json:"frequency"`
+	RemediationScriptID *string                   `json:"remediation_script_id"`
+	RemediationProxmox  *model.ProxmoxRemediation `json:"remediation_proxmox"`
 }
 
 func (s *Server) handleAddCheck(w http.ResponseWriter, r *http.Request) {
@@ -136,10 +137,14 @@ func (s *Server) handleAddCheck(w http.ResponseWriter, r *http.Request) {
 	if !s.decodeJSON(w, r, &req) {
 		return
 	}
+	rp := req.RemediationProxmox
+	if rp != nil && rp.HostID == "" {
+		rp = nil // leeres Objekt = keine Proxmox-Remediation
+	}
 	c := &model.PolicyCheck{
 		ID: store.NewID(), PolicyID: chi.URLParam(r, "id"),
 		Name: req.Name, Type: req.Type, Config: req.Config, ScriptID: req.ScriptID, Severity: req.Severity,
-		Frequency: req.Frequency, RemediationScriptID: req.RemediationScriptID,
+		Frequency: req.Frequency, RemediationScriptID: req.RemediationScriptID, RemediationProxmox: rp,
 	}
 	if err := s.store.AddCheck(r.Context(), c); err != nil {
 		s.mapStoreErr(w, err)

@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/boonkerz/roster/internal/server/alert"
 	"github.com/boonkerz/roster/internal/server/auth"
 	"github.com/boonkerz/roster/internal/server/model"
+	"github.com/boonkerz/roster/internal/server/proxmox"
 	"github.com/boonkerz/roster/internal/server/store"
 	"github.com/boonkerz/roster/internal/shared"
 )
@@ -210,40 +212,80 @@ func eventLabel(status string) string {
 const remediationCooldown = 30 * time.Minute
 
 // runRemediations führt bei Checks, die neu auf „failing" wechseln, ein hinterlegtes
-// Remediation-Skript automatisch aus (Self-Healing) – mit Cooldown je Gerät/Check.
+// Remediation-Skript aus und/oder rebootet einen zugeordneten Proxmox-Gast
+// (Self-Healing) – mit gemeinsamem Cooldown je Gerät/Check.
 func (s *Server) runRemediations(ctx context.Context, device *model.Device, events []model.CheckEvent) {
 	for _, ev := range events {
 		if ev.NewStatus != "failing" {
 			continue
 		}
-		sc, err := s.store.RemediationScript(ctx, ev.CheckID)
-		if err != nil {
-			continue // kein Remediation-Skript konfiguriert
+		sc, scErr := s.store.RemediationScript(ctx, ev.CheckID)
+		pr, host, pxErr := s.store.ProxmoxRemediationForCheck(ctx, ev.CheckID)
+		if scErr != nil && pxErr != nil {
+			continue // keine Remediation konfiguriert
 		}
 		if !s.store.RemediationDue(ctx, device.ID, ev.CheckID, remediationCooldown) {
 			continue // Cooldown noch aktiv
-		}
-		content := sc.Content
-		if agent, client, site, ferr := s.store.FieldMapsForDevice(ctx, device.ID); ferr == nil {
-			content = store.SubstituteFields(content, agent, client, site)
 		}
 		name := ev.CheckName
 		if name == "" {
 			name = ev.CheckID
 		}
-		payload := map[string]any{"shell": sc.Shell, "script": content, "platforms": sc.Platforms}
-		if _, err := s.queueCommand(ctx, device.ID, "run_script", "Auto-Remediation: "+name, payload); err != nil {
-			s.log.Warn("remediation einreihen", "check", ev.CheckID, "err", err)
-			continue
+		ran := false
+
+		// (1) Remediation-Skript auf dem Gerät ausführen.
+		if scErr == nil {
+			content := sc.Content
+			if agent, client, site, ferr := s.store.FieldMapsForDevice(ctx, device.ID); ferr == nil {
+				content = store.SubstituteFields(content, agent, client, site)
+			}
+			payload := map[string]any{"shell": sc.Shell, "script": content, "platforms": sc.Platforms}
+			if _, err := s.queueCommand(ctx, device.ID, "run_script", "Auto-Remediation: "+name, payload); err != nil {
+				s.log.Warn("remediation einreihen", "check", ev.CheckID, "err", err)
+			} else {
+				ran = true
+				_ = s.store.InsertAudit(ctx, model.AuditEntry{
+					TS: time.Now().UTC(), Username: "system",
+					Action: "Auto-Remediation ausgelöst (" + name + ")", Method: "AUTO",
+					Path: "/devices/" + device.ID, Status: 200,
+				})
+				s.log.Info("auto-remediation ausgelöst", "device", device.Hostname, "check", name, "script", sc.Name)
+			}
 		}
-		_ = s.store.MarkRemediation(ctx, device.ID, ev.CheckID, time.Now())
+
+		// (2) Proxmox-Gast rebooten (serverseitig, per API-Token). Netz-Aufruf im
+		// Hintergrund, damit die Geräte-Antwort nicht blockiert.
+		if pxErr == nil {
+			ran = true
+			go s.proxmoxReboot(host, pr, device.Hostname, name)
+		}
+
+		if ran {
+			_ = s.store.MarkRemediation(ctx, device.ID, ev.CheckID, time.Now())
+		}
+	}
+}
+
+// proxmoxReboot rebootet einen Gast als Auto-Remediation (eigener Timeout, Audit).
+func (s *Server) proxmoxReboot(host *model.ProxmoxHost, pr *model.ProxmoxRemediation, deviceName, checkName string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	target := host.Name + " " + pr.Type + "/" + strconv.Itoa(pr.VMID)
+	if err := proxmox.New(host).Reboot(ctx, pr.Node, pr.Type, pr.VMID); err != nil {
+		s.log.Warn("proxmox-remediation fehlgeschlagen", "check", checkName, "target", target, "err", err)
 		_ = s.store.InsertAudit(ctx, model.AuditEntry{
 			TS: time.Now().UTC(), Username: "system",
-			Action: "Auto-Remediation ausgelöst (" + name + ")", Method: "AUTO",
-			Path: "/devices/" + device.ID, Status: 200,
+			Action: "Proxmox-Remediation FEHLGESCHLAGEN (" + checkName + " → " + target + "): " + err.Error(),
+			Method: "AUTO", Path: "/proxmox", Status: 502,
 		})
-		s.log.Info("auto-remediation ausgelöst", "device", device.Hostname, "check", name, "script", sc.Name)
+		return
 	}
+	_ = s.store.InsertAudit(ctx, model.AuditEntry{
+		TS: time.Now().UTC(), Username: "system",
+		Action: "Proxmox-Remediation: Gast rebootet (" + checkName + " → " + target + ")",
+		Method: "AUTO", Path: "/proxmox", Status: 200,
+	})
+	s.log.Info("proxmox-remediation ausgelöst", "device", deviceName, "check", checkName, "target", target)
 }
 
 // alertSoftwareChanges benachrichtigt über seit `since` erfasste Software-Änderungen,

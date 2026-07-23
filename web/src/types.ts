@@ -108,8 +108,35 @@ export interface PolicyCheck {
   config: Record<string, number | string>;
   script_id?: string;
   remediation_script_id?: string | null;
+  remediation_proxmox?: ProxmoxRemediation | null;
   severity?: "warning" | "critical";
   frequency?: string;
+}
+
+// ProxmoxHost ist der Zugang zu einer Proxmox-VE-API (Token-Secret nie im Client).
+export interface ProxmoxHost {
+  id: string;
+  name: string;
+  base_url: string;
+  token_id: string;
+  verify_tls: boolean;
+}
+
+// ProxmoxGuest ist ein Container/VM eines Proxmox-Hosts.
+export interface ProxmoxGuest {
+  node: string;
+  vmid: number;
+  type: "lxc" | "qemu";
+  name: string;
+  status: string;
+}
+
+// ProxmoxRemediation zeigt auf einen Gast, der bei Check-Fehler rebootet wird.
+export interface ProxmoxRemediation {
+  host_id: string;
+  node: string;
+  type: "lxc" | "qemu";
+  vmid: number;
 }
 
 export type CustomFieldType = "text" | "number" | "checkbox" | "select" | "multiselect" | "datetime" | "list";

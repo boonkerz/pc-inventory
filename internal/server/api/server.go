@@ -160,6 +160,14 @@ func (s *Server) routes() http.Handler {
 					// Skript-Liste: für die Skripte-Seite ODER den Richtlinien-Editor.
 					r.With(s.requirePermAny(model.PermScripts, model.PermPolicies)).Get("/scripts", s.handleListScripts)
 
+					// Proxmox-Hosts/Gäste lesen: für die Einstellungen ODER die
+					// Proxmox-Remediation-Auswahl im Richtlinien-Editor.
+					r.Group(func(r chi.Router) {
+						r.Use(s.requirePermAny(model.PermSettings, model.PermPolicies))
+						r.Get("/proxmox/hosts", s.handleListProxmoxHosts)
+						r.Get("/proxmox/hosts/{id}/guests", s.handleListProxmoxGuests)
+					})
+
 					// --- Einstellungen lesen (page.settings) ---
 					r.Group(func(r chi.Router) {
 						r.Use(s.requirePerm(model.PermSettings))
@@ -259,6 +267,9 @@ func (s *Server) routes() http.Handler {
 						r.Put("/settings/alert-channels/{id}", s.handleUpdateAlertChannel)
 						r.Delete("/settings/alert-channels/{id}", s.handleDeleteAlertChannel)
 						r.Post("/settings/alert-channels/{id}/test", s.handleTestAlertChannel)
+						r.Post("/proxmox/hosts", s.handleCreateProxmoxHost)
+						r.Delete("/proxmox/hosts/{id}", s.handleDeleteProxmoxHost)
+						r.Post("/proxmox/hosts/{id}/reboot", s.handleRebootProxmoxGuest)
 						r.Put("/remote-consent", s.handleSetRemoteConsent)
 						r.Post("/software-packages", s.handleCreatePackage)
 						r.Put("/software-packages/{id}", s.handleUpdatePackage)

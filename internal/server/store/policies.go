@@ -107,7 +107,7 @@ func (s *Store) loadPolicyChildren(ctx context.Context, p *model.Policy) error {
 
 func (s *Store) checksOf(ctx context.Context, policyID string) ([]model.PolicyCheck, error) {
 	rows, err := s.db.QueryContext(ctx, s.rebind(`
-		SELECT id, name, type, config, script_id, severity, frequency, remediation_script_id FROM policy_checks WHERE policy_id=? ORDER BY name`), policyID)
+		SELECT id, name, type, config, script_id, severity, frequency, remediation_script_id, remediation_proxmox FROM policy_checks WHERE policy_id=? ORDER BY name`), policyID)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,8 @@ func (s *Store) checksOf(ctx context.Context, policyID string) ([]model.PolicyCh
 		var c model.PolicyCheck
 		var cfg string
 		var scriptID, remScriptID sql.NullString
-		if err := rows.Scan(&c.ID, &c.Name, &c.Type, &cfg, &scriptID, &c.Severity, &c.Frequency, &remScriptID); err != nil {
+		var remProxmox string
+		if err := rows.Scan(&c.ID, &c.Name, &c.Type, &cfg, &scriptID, &c.Severity, &c.Frequency, &remScriptID, &remProxmox); err != nil {
 			return nil, err
 		}
 		c.PolicyID = policyID
@@ -129,6 +130,12 @@ func (s *Store) checksOf(ctx context.Context, policyID string) ([]model.PolicyCh
 		if remScriptID.Valid && remScriptID.String != "" {
 			v := remScriptID.String
 			c.RemediationScriptID = &v
+		}
+		if remProxmox != "" {
+			var pr model.ProxmoxRemediation
+			if json.Unmarshal([]byte(remProxmox), &pr) == nil && pr.HostID != "" {
+				c.RemediationProxmox = &pr
+			}
 		}
 		out = append(out, c)
 	}
@@ -206,13 +213,18 @@ func (s *Store) AddCheck(ctx context.Context, c *model.PolicyCheck) error {
 	if c.RemediationScriptID != nil && *c.RemediationScriptID != "" {
 		remID = *c.RemediationScriptID
 	}
+	remProxmox := ""
+	if c.RemediationProxmox != nil && c.RemediationProxmox.HostID != "" {
+		b, _ := json.Marshal(c.RemediationProxmox)
+		remProxmox = string(b)
+	}
 	severity := c.Severity
 	if severity != "warning" {
 		severity = "critical"
 	}
 	_, err := s.db.ExecContext(ctx, s.rebind(`
-		INSERT INTO policy_checks (id, policy_id, name, type, config, script_id, severity, frequency, remediation_script_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`),
-		c.ID, c.PolicyID, c.Name, c.Type, string(cfg), scriptID, severity, c.Frequency, remID)
+		INSERT INTO policy_checks (id, policy_id, name, type, config, script_id, severity, frequency, remediation_script_id, remediation_proxmox) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
+		c.ID, c.PolicyID, c.Name, c.Type, string(cfg), scriptID, severity, c.Frequency, remID, remProxmox)
 	return err
 }
 

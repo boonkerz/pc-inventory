@@ -52,6 +52,25 @@ func TestHTTPCheck(t *testing.T) {
 	}
 }
 
+func TestHTTPCheckContains(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte("<html><body>Willkommen bei Roster</body></html>"))
+	}))
+	defer srv.Close()
+
+	// Text vorhanden -> passing
+	c := shared.CheckSpec{ID: "1", Type: "http", Config: map[string]any{"url": srv.URL, "contains": "Willkommen"}}
+	if r := httpCheck(context.Background(), c); r.Status != "passing" {
+		t.Fatalf("vorhandener Text sollte passing sein: %+v", r)
+	}
+	// Text fehlt -> failing, obwohl HTTP 200
+	c.Config["contains"] = "Fehlermeldung"
+	if r := httpCheck(context.Background(), c); r.Status != "failing" {
+		t.Fatalf("fehlender Text sollte failing sein: %+v", r)
+	}
+}
+
 func TestParsePingMs(t *testing.T) {
 	for _, s := range []string{"64 bytes from x: icmp_seq=0 ttl=64 time=0.045 ms", "Antwort von 127.0.0.1: Zeit=1ms"} {
 		if _, ok := parsePingMs(s); !ok {

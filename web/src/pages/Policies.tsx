@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import { useI18n, gt } from "../i18n";
-import type { Policy, PolicyTask, Script, ClientTree, Device } from "../types";
+import type { Policy, PolicyTask, Script, ClientTree, Device, ProxmoxHost, ProxmoxGuest } from "../types";
 
 const WD = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 function weekdayLabel(s: string): string {
@@ -142,8 +142,17 @@ function PolicyEditor({
   const [cPort, setCPort] = useState("");   // TCP-Check: Port
   const [cUrl, setCUrl] = useState("");     // HTTP-Check: URL
   const [cExpected, setCExpected] = useState(""); // HTTP: erwarteter Status
+  const [cContains, setCContains] = useState(""); // HTTP: Seiteninhalt muss diesen Text enthalten
   const [cRemediation, setCRemediation] = useState(""); // Self-Healing: Skript bei Fehler
   const [cAllowed, setCAllowed] = useState(""); // Ports-Check: erlaubte Ports (Whitelist)
+  const [cProxHost, setCProxHost] = useState("");   // Proxmox-Remediation: Host
+  const [cProxGuest, setCProxGuest] = useState(""); // Proxmox-Remediation: "type:vmid"
+  const { data: proxHosts } = useQuery({ queryKey: ["proxmox-hosts"], queryFn: () => api.get<ProxmoxHost[]>("/proxmox/hosts") });
+  const { data: proxGuests } = useQuery({
+    queryKey: ["proxmox-guests", cProxHost],
+    queryFn: () => api.get<ProxmoxGuest[]>(`/proxmox/hosts/${cProxHost}/guests`),
+    enabled: !!cProxHost, retry: false,
+  });
   const addCheck = useMutation({
     mutationFn: () => {
       let config: Record<string, number | string> = { threshold: cThreshold };
@@ -161,6 +170,7 @@ function PolicyEditor({
         if (cType === "http") {
           config.url = cUrl.trim();
           if (cExpected !== "") config.expected_status = Number(cExpected);
+          if (cContains.trim() !== "") config.contains = cContains.trim();
         } else {
           config.host = cHost.trim();
           if (cType === "tcp") config.port = Number(cPort);
@@ -172,13 +182,19 @@ function PolicyEditor({
       // Bei aktivem Ausgabe-Vergleich definieren die Schwellen den Schweregrad
       // (Fehler-Schwelle = kritisch), daher fix "critical".
       const severity = cType === "script" && cOp ? "critical" : cSeverity;
+      let remediation_proxmox = null;
+      if (cProxHost && cProxGuest) {
+        const g = (proxGuests ?? []).find((x) => `${x.type}:${x.vmid}` === cProxGuest);
+        if (g) remediation_proxmox = { host_id: cProxHost, node: g.node, type: g.type, vmid: g.vmid };
+      }
       return api.post(`/policies/${policy.id}/checks`, {
         name: cName, type: cType, severity, frequency: cFreq, config,
         script_id: cType === "script" ? cScript || null : null,
         remediation_script_id: cRemediation || null,
+        remediation_proxmox,
       });
     },
-    onSuccess: () => { onChange(); setCName(""); setCHost(""); setCPort(""); setCUrl(""); setCExpected(""); setCRemediation(""); setCAllowed(""); },
+    onSuccess: () => { onChange(); setCName(""); setCHost(""); setCPort(""); setCUrl(""); setCExpected(""); setCContains(""); setCRemediation(""); setCAllowed(""); setCProxHost(""); setCProxGuest(""); },
   });
   const delCheck = useMutation({ mutationFn: (id: string) => api.del(`/checks/${id}`), onSuccess: onChange });
 
@@ -235,7 +251,7 @@ function PolicyEditor({
             <span className="link-strong">{c.name || t(CHECK_TYPES[c.type])}</span>
             <span className="muted small">
               {c.type === "script" ? `Skript: ${scriptName(c.script_id)}`
-                : c.type === "http" ? `HTTP: ${c.config?.url ?? ""}${c.config?.expected_status ? ` (=${c.config.expected_status})` : ""}`
+                : c.type === "http" ? `HTTP: ${c.config?.url ?? ""}${c.config?.expected_status ? ` (=${c.config.expected_status})` : ""}${c.config?.contains ? ` ⊃ "${c.config.contains}"` : ""}`
                 : c.type === "tcp" ? `TCP: ${c.config?.host ?? ""}:${c.config?.port ?? ""}`
                 : c.type === "ping" ? `Ping: ${c.config?.host ?? ""}`
                 : c.type === "ports" ? `${t("Erlaubt")}: ${c.config?.allowed ?? "—"}`
@@ -243,6 +259,7 @@ function PolicyEditor({
               {" · "}{c.severity === "warning" ? t("Warnung") : t("Kritisch")}
               {" · "}{c.frequency ? t(FREQ_LABEL[c.frequency] ?? c.frequency) : t("jeden Checkin")}
               {c.remediation_script_id && <> {" · "}<span title={t("Bei Fehler automatisch ausführen")}>🔧 {scriptName(c.remediation_script_id)}</span></>}
+              {c.remediation_proxmox && <> {" · "}<span title={t("Bei Fehler Proxmox-Gast rebooten")}>⟳ {c.remediation_proxmox.type}/{c.remediation_proxmox.vmid}</span></>}
             </span>
             <button className="btn ghost sm" onClick={() => delCheck.mutate(c.id)}>×</button>
           </div>
@@ -279,6 +296,8 @@ function PolicyEditor({
                 <>
                   <input placeholder={t("URL (z.B. example.com)")} value={cUrl} onChange={(e) => setCUrl(e.target.value)} style={{ minWidth: 180 }} />
                   <label className="num">{t("Status")}<input type="number" placeholder="2xx" value={cExpected} onChange={(e) => setCExpected(e.target.value)} /></label>
+                  <input placeholder={t("Enthält Text (optional)")} value={cContains} onChange={(e) => setCContains(e.target.value)} style={{ minWidth: 160 }}
+                    title={t("Der Check schlägt fehl, wenn der Seiteninhalt diesen Text nicht enthält.")} />
                 </>
               ) : (
                 <>
@@ -306,6 +325,20 @@ function PolicyEditor({
             <option value="">{t("— keine Remediation —")}</option>
             {scripts.map((s) => <option key={s.id} value={s.id}>🔧 {s.name}</option>)}
           </select>
+          {(proxHosts ?? []).length > 0 && (
+            <>
+              <select value={cProxHost} onChange={(e) => { setCProxHost(e.target.value); setCProxGuest(""); }} title={t("Proxmox-Remediation: Gast bei Fehler rebooten")}>
+                <option value="">{t("— kein Proxmox-Reboot —")}</option>
+                {(proxHosts ?? []).map((h) => <option key={h.id} value={h.id}>⟳ {h.name || h.base_url}</option>)}
+              </select>
+              {cProxHost && (
+                <select value={cProxGuest} onChange={(e) => setCProxGuest(e.target.value)} title={t("Zu rebootender Gast")}>
+                  <option value="">{t("— Gast wählen —")}</option>
+                  {(proxGuests ?? []).map((g) => <option key={`${g.type}:${g.vmid}`} value={`${g.type}:${g.vmid}`}>{g.vmid} {g.name} ({g.node})</option>)}
+                </select>
+              )}
+            </>
+          )}
           <button className="btn primary" type="submit">+ {t("Check")}</button>
         </form>
       </section>

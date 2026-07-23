@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -68,8 +69,12 @@ func tcpCheck(ctx context.Context, c shared.CheckSpec) shared.CheckResult {
 	}
 }
 
-// httpCheck prüft eine URL auf erwarteten Statuscode (Standard: 2xx/3xx) und
-// optional die Antwortzeit.
+// maxHTTPBody begrenzt das gelesene Antwort-Body bei der Inhaltsprüfung (contains).
+const maxHTTPBody = 2 << 20 // 2 MiB
+
+// httpCheck prüft eine URL auf erwarteten Statuscode (Standard: 2xx/3xx), optional
+// die Antwortzeit und – wenn "contains" gesetzt ist – ob der Seiteninhalt einen
+// bestimmten Text enthält (Website-Überwachung).
 func httpCheck(ctx context.Context, c shared.CheckSpec) shared.CheckResult {
 	url := strConfig(c, "url")
 	if url == "" {
@@ -78,6 +83,7 @@ func httpCheck(ctx context.Context, c shared.CheckSpec) shared.CheckResult {
 	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
 		url = "https://" + url
 	}
+	contains := strConfig(c, "contains")
 	client := &http.Client{Timeout: timeoutDur(c, 10*time.Second)}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -89,7 +95,12 @@ func httpCheck(ctx context.Context, c shared.CheckSpec) shared.CheckResult {
 		return shared.CheckResult{CheckID: c.ID, Status: "failing", Output: fmt.Sprintf("Anfrage an %s fehlgeschlagen: %v", url, err)}
 	}
 	defer resp.Body.Close()
-	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<16))
+	// Body nur bei aktiver Inhaltsprüfung wirklich lesen, sonst verwerfen.
+	limit := int64(1 << 16)
+	if contains != "" {
+		limit = maxHTTPBody
+	}
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, limit))
 	ms := float64(time.Since(start).Milliseconds())
 
 	statusOK := resp.StatusCode >= 200 && resp.StatusCode < 400
@@ -100,9 +111,19 @@ func httpCheck(ctx context.Context, c shared.CheckSpec) shared.CheckResult {
 	if statusOK {
 		status = latencyStatus(c, ms) // erst bei richtigem Status zählt die Antwortzeit
 	}
+	output := fmt.Sprintf("HTTP %d in %.0f ms (%s)", resp.StatusCode, ms, url)
+
+	// Inhaltsprüfung: fehlender Text schlägt fehl (auch bei sonst gutem Status).
+	if contains != "" {
+		if bytes.Contains(body, []byte(contains)) {
+			output += fmt.Sprintf(" – Text %q gefunden", contains)
+		} else {
+			status = "failing"
+			output += fmt.Sprintf(" – Text %q NICHT gefunden", contains)
+		}
+	}
 	return shared.CheckResult{
-		CheckID: c.ID, Status: status, Value: float64(resp.StatusCode),
-		Output: fmt.Sprintf("HTTP %d in %.0f ms (%s)", resp.StatusCode, ms, url),
+		CheckID: c.ID, Status: status, Value: float64(resp.StatusCode), Output: output,
 	}
 }
 

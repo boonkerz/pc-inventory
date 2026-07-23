@@ -74,7 +74,7 @@ type Device struct {
 	EnrolledAt   time.Time  `json:"enrolled_at"`
 	Revoked      bool       `json:"revoked"`
 	Managed      bool       `json:"managed"` // false = ohne Agent (z. B. aus Netzwerk-Scan)
-	Status       string     `json:"status"` // berechnet: online/offline/unmanaged (nicht persistiert)
+	Status       string     `json:"status"`  // berechnet: online/offline/unmanaged (nicht persistiert)
 
 	// Freitext-Notizen zum Gerät (Doku).
 	Notes string `json:"notes"`
@@ -216,8 +216,8 @@ type Group struct {
 type Script struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
-	Shell     string    `json:"shell"`      // powershell | shell
-	Platforms []string  `json:"platforms"`  // windows|linux|darwin; leer = keine Extra-Einschränkung
+	Shell     string    `json:"shell"`     // powershell | shell
+	Platforms []string  `json:"platforms"` // windows|linux|darwin; leer = keine Extra-Einschränkung
 	Content   string    `json:"content"`
 	CheckOnly bool      `json:"check_only"` // nur als Check verwendbar (nicht in Ausführen/Sammelaktion)
 	CreatedAt time.Time `json:"created_at"`
@@ -245,6 +245,28 @@ type PolicyCheck struct {
 	Frequency string         `json:"frequency"` // "" = jeden Checkin, sonst Preset
 	// RemediationScriptID: bei „failing" automatisch ausgeführtes Skript (Self-Healing).
 	RemediationScriptID *string `json:"remediation_script_id,omitempty"`
+	// RemediationProxmox: bei „failing" automatisch rebooteter Proxmox-Gast (optional).
+	RemediationProxmox *ProxmoxRemediation `json:"remediation_proxmox,omitempty"`
+}
+
+// ProxmoxRemediation zeigt auf einen Proxmox-Gast (LXC/QEMU), der bei Check-Fehler
+// automatisch rebootet wird.
+type ProxmoxRemediation struct {
+	HostID string `json:"host_id"`
+	Node   string `json:"node"`
+	Type   string `json:"type"` // lxc | qemu
+	VMID   int    `json:"vmid"`
+}
+
+// ProxmoxHost ist der Zugang zu einer Proxmox-VE-API (API-Token). TokenSecret wird
+// nie an Clients zurückgegeben (nur beim Anlegen entgegengenommen).
+type ProxmoxHost struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	BaseURL     string `json:"base_url"`
+	TokenID     string `json:"token_id"`
+	TokenSecret string `json:"token_secret,omitempty"`
+	VerifyTLS   bool   `json:"verify_tls"`
 }
 
 // PolicyTask ist ein geplanter Skript-Task innerhalb einer Policy.
